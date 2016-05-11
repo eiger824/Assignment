@@ -113,7 +113,6 @@ int Statistics::getPIDindex(int pid)
     {
       if (m_pid_list[i] == pid)
 	{
-	  //cout << "Returning index: " << i << endl;
 	  return i;
 	}
     }
@@ -122,17 +121,14 @@ int Statistics::getPIDindex(int pid)
 void Statistics::addUpScrambleCount(int pid)
 {
   ++m_scrambles[getPIDindex(pid)];
-  //cout << "Scramble count: " << m_scrambles[getPIDindex(pid)] << endl;
 }
 void Statistics::addUpPidCount(int pid)
 {
   ++m_pid_counters[getPIDindex(pid)];
-  //cout << "Counter of pid " << pid << ": " << m_pid_counters[getPIDindex(pid)];
 }
 void Statistics::addUpGlobalPacketCounter()
 {
   ++m_global_TS_packet_counter;
-  //cout << "Global TS packet count: " << dec << m_global_TS_packet_counter << endl;
 }
 int Statistics::getGlobalPacketCounter()
 {
