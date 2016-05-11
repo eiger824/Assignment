@@ -1,6 +1,7 @@
 static const int PACKET_SIZE = 188;
 static const int HEADER_BYTES = 4;
 static const int BYTE_SIZE = 8;
+static const int CONT_COUNTER_MAX = 15;
 
 enum TYPE
   {
@@ -24,5 +25,6 @@ struct Header
   uint sync_byte;
   short PID;
   bool scrambled;
+  uint cont_counter;
   //TYPE type;
 };

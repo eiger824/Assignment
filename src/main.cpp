@@ -21,6 +21,7 @@ Header fillHeaderValues(vector<int>header_bytes)
   unsigned i;
   bitset<13>pid_bitrepr;
   bitset<2>scrambled_bitrepr;
+  bitset<4>cont_counter_bitrepr;
   bitset<8>aux_byte1(header_bytes[1]);
   bitset<8>aux_byte2(header_bytes[2]);
   bitset<8>aux_byte3(header_bytes[3]);
@@ -35,10 +36,15 @@ Header fillHeaderValues(vector<int>header_bytes)
   //Now translate pid bitset to ulong
   TS_Header.PID = pid_bitrepr.to_ulong();
   //cout << "Parsed PID: 0x" << hex << TS_Header.PID << endl;
-  //Next, remanining byte
+  //remanining byte: scrambling
   scrambled_bitrepr[0] = aux_byte3[BYTE_SIZE - 2];
   scrambled_bitrepr[1] = aux_byte3[BYTE_SIZE - 1];
-  //Now translate scrambled to dec
+  //remaning byte: cont_counter
+  for (i = 0; i < BYTE_SIZE / 2; ++i)
+    {
+      cont_counter_bitrepr[i] = aux_byte3[i];
+    }
+  //Now translate scrambled & cont_counter to dec
   if (scrambled_bitrepr.to_ulong() == 0)
     {
       TS_Header.scrambled = false;
@@ -47,6 +53,7 @@ Header fillHeaderValues(vector<int>header_bytes)
     {
       TS_Header.scrambled = true;
     }
+  TS_Header.cont_counter = cont_counter_bitrepr.to_ulong();
   //return assembled struct
   return TS_Header;  
 }
@@ -65,6 +72,18 @@ vector<int> getNextHeaderBytes(FILE *file, int position)
   return values;
 }
 
+bool isContCounterError(int glob_cnt, int parsed_cnt)
+{
+  if (glob_cnt % CONT_COUNTER_MAX != parsed_cnt)
+    {
+      return true;
+    }
+  else
+    {
+      return false;
+    }
+}
+
 int main(int argc, char **argv)
 {
   /************Variable definition**************/
@@ -76,14 +95,15 @@ int main(int argc, char **argv)
   short PID; //2-byte = 16bits, only need 13
   bool scrambled;
   uint nr_sync_errors;
+  uint cont_counter;
   TYPE type;
   Header header_struct;
+  //object that will perform statistics on our input stream
   Statistics watchdog;
   /*********************************************/
   if (file == NULL) perror ("Error opening file");
   else
     {
-      int pos = ftell(file);
       int len = fseek(file, 0, SEEK_END);
       int length = ftell(file);
       watchdog.setGlobalByteNumber(length);
@@ -135,6 +155,12 @@ int main(int argc, char **argv)
 		  if (header_struct.scrambled)
 		    {
 		      watchdog.addUpScrambleCount(header_struct.PID);
+		    }
+		  cont_counter = header_struct.cont_counter;
+		  //check if parsed counter is correct
+		  if (isContCounterError(watchdog.getGlobalPacketCounter()-1, cont_counter))
+		    {
+		      watchdog.addUpContCounterError(header_struct.PID);
 		    }
 		    //******************************
 		  for (unsigned i = 0; i < HEADER_BYTES; ++i)

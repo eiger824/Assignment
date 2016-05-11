@@ -18,12 +18,14 @@ public:
   void addUpPidCount(int pid);
   void addUpScrambleCount(int pid);
   void addUpGlobalPacketCounter();
+  void addUpContCounterError(int pid);
   int getGlobalPacketCounter();
   void setGlobalByteNumber(int nr);
 private:
   void sortPIDList();
   int getPIDindex(int pid);
   string getPIDType(int pid);
+  void printSingleLine(int index);
 private:
   uint m_nr_sync_errors;
   vector<int>m_pid_list;
@@ -31,5 +33,5 @@ private:
   uint m_global_TS_packet_counter;
   vector<int>m_scrambles;
   int m_nr_bytestream;
-  
+  vector<int>m_cont_counters;
 };

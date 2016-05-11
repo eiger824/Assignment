@@ -1,6 +1,7 @@
 //system headers
 #include <iostream>
 #include <stdio.h>
+#include <iomanip>
 
 //project headers
 #include "statistics.hpp"
@@ -37,13 +38,24 @@ void Statistics::sortPIDList()
 	    {
 	      int temp_pid = m_pid_list[i];
 	      int temp_pidc = m_pid_counters[i];
+	      int temp_pidcc = m_cont_counters[i];
 	      m_pid_list[i] = m_pid_list[j];
 	      m_pid_counters[i] = m_pid_counters[j];
+	      m_cont_counters[i] = m_cont_counters[j];
 	      m_pid_list[j] = temp_pid;
 	      m_pid_counters[j] = temp_pidc;
+	      m_cont_counters[j] = temp_pidcc;
 	    }
 	}
     }
+}
+void Statistics::printSingleLine(int index)
+{
+  cout << "0x" << hex << m_pid_list[index] << "\t" <<
+    setw(10) << getPIDType(m_pid_list[index]) << "\t" <<
+    setw(10) << dec << m_pid_counters[index] << " (" << (float) 100 * m_pid_counters[index] / m_global_TS_packet_counter << "%)\t" <<
+    setw(10) << dec << m_scrambles[index] << " (" << (float) 100 * m_scrambles[index] / m_pid_counters[index] << "%)\t" <<
+    setw(10) << m_cont_counters[index] << "(" << (float) 100* m_cont_counters[index] / m_global_TS_packet_counter << "%)" << endl;
 }
 void Statistics::showStatistics()
 {
@@ -52,26 +64,20 @@ void Statistics::showStatistics()
   printf("Print [a]ll PIDs or [t]op 20 most-common?[a/t]: ");
   scanf("%c",&opt);
   cout << "Total number of detected TS packets: " << m_global_TS_packet_counter << endl;
-  cout << "PID\tType\tCount(%)\tScrambled(%)\tCont.Errors(%)\n";
+  cout << setw(0) << "PID" << setw(15) << "Type" << setw(20) << "Count(%)" << setw(27) << "Scrambled(%)" << setw(20) << "Cont.Errors(%)\n";
   switch(opt)
     {
     case 'a':
       for (unsigned i = 0; i < m_pid_list.size(); ++i)
 	{
-	  cout << "0x" << hex << m_pid_list[i] << "\t" <<
-	    getPIDType(m_pid_list[i]) << "\t" <<
-	    dec << m_pid_counters[i] << " (" << (float) 100 * m_pid_counters[i] / m_global_TS_packet_counter << "%)\t" <<
-	    dec << m_scrambles[i] << " (" << (float) 100 * m_scrambles[i] / m_pid_counters[i] << "%)\t" << endl;
+	  printSingleLine(i);
 	}
       break;
     case 't':
       sortPIDList();
       for (unsigned i = 0; i < 20; ++i)
 	{
-	  cout << "0x" << hex << m_pid_list[i] << "\t" <<
-	    getPIDType(m_pid_list[i]) << "\t" <<
-	    dec << m_pid_counters[i] << " (" << (float) 100 * m_pid_counters[i] / m_global_TS_packet_counter << "%)\t" <<
-	    dec << m_scrambles[i] << " (" << (float) 100 * m_scrambles[i] / m_pid_counters[i] << "%)\t" << endl;
+	  printSingleLine(i);
 	}  
       break;
     default:
@@ -96,10 +102,10 @@ bool Statistics::isPIDregistered(int pid)
 }
 void Statistics::registerNewPID(int pid)
 {
-  //cout << "Registering new pid: " << pid << endl;
   m_pid_list.push_back(pid);
   m_pid_counters.push_back(0);
   m_scrambles.push_back(0);
+  m_cont_counters.push_back(0);
 }
 int Statistics::getPIDindex(int pid)
 {
@@ -131,4 +137,8 @@ void Statistics::addUpGlobalPacketCounter()
 int Statistics::getGlobalPacketCounter()
 {
   return m_global_TS_packet_counter;
+}
+void Statistics::addUpContCounterError(int pid)
+{
+  ++m_cont_counters[getPIDindex(pid)];
 }
