@@ -21,6 +21,7 @@ public:
   void addUpContCounterError(int pid);
   int getGlobalPacketCounter();
   void setGlobalByteNumber(int nr);
+  int getPidCounter(int pid);
 private:
   void sortPIDList();
   int getPIDindex(int pid);

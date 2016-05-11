@@ -158,7 +158,7 @@ int main(int argc, char **argv)
 		    }
 		  cont_counter = header_struct.cont_counter;
 		  //check if parsed counter is correct
-		  if (isContCounterError(watchdog.getGlobalPacketCounter()-1, cont_counter))
+		  if (isContCounterError(watchdog.getPidCounter(header_struct.PID), cont_counter))
 		    {
 		      watchdog.addUpContCounterError(header_struct.PID);
 		    }

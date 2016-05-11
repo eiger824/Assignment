@@ -138,3 +138,7 @@ void Statistics::addUpContCounterError(int pid)
 {
   ++m_cont_counters[getPIDindex(pid)];
 }
+int Statistics::getPidCounter(int pid)
+{
+  return m_pid_counters[getPIDindex(pid)];
+}
