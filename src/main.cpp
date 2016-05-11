@@ -62,8 +62,8 @@ vector<int> getNextHeaderBytes(FILE *file, int position)
 int main(int argc, char **argv)
 {
   /************Variable definition**************/
-  ofstream headers("/home/eiger824/Programming/Files/logs/headers.log");
-  ofstream to_file("/home/eiger824/Programming/Files/logs/bytes.log");
+  ofstream headers("/home/eiger824/Programming/Assignment/logs/headers.log");
+  ofstream to_file("/home/eiger824/Programming/Assignment/logs/bytes.log");
   FILE *file = fopen(argv[1],"rb");
   bool firstTime = true;
   vector<int>header;
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
       int len = fseek(file, 0, SEEK_END);
       int length = ftell(file);
       watchdog.setGlobalByteNumber(length);
-      cout << "\nInitial byte pos: " << pos <<
+      cout << "Initial byte pos: " << pos <<
 	", File length (bytes): " << length << "\n";
       cout << "Extracting byte stream...\n";
       int c;
@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 		    {
 		      watchdog.addUpScrambleCount(header_struct.PID);
 		    }
-		  //********************************
+		    //*******************************
 		  for (unsigned i = 0; i < HEADER_BYTES; ++i)
 		    {
 		      bitset<8>bit_rep(header[i]);
@@ -139,8 +139,6 @@ int main(int argc, char **argv)
 	      bitset<8>bitrep(c);
 	      to_file << "0x" << hex << c << "\t" << dec << c  << "\t" << bitrep << endl;
 	    }
-
-	  
 	  to_file.close();
 	  headers.close();
 	}

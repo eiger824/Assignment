@@ -15,6 +15,7 @@ void Statistics::showStatistics()
 {
   //print out info
   cout << "--PID--\t" << "Count(%)\t" << "Scrambled(%)\t" << "Cont.Errors(%)\n";
+  cout << "(m_pid_list.size() = " << m_pid_list.size() << ")\n";
   for (unsigned i = 0; i < m_pid_list.size(); ++i)
     {
       cout << "0x" << hex << m_pid_list[i] << "\t" <<
@@ -26,11 +27,11 @@ void Statistics::showStatistics()
 }
 void Statistics::setGlobalByteNumber(int nr)
 {
-  cout << "Setting global byte number to: " << nr << endl;
   m_nr_bytestream = nr;
 }
 bool Statistics::isPIDregistered(int pid)
 {
+  cout << "list size is : " << m_pid_list.size() << "\n";
   for (unsigned i = 0; i < m_pid_list.size(); ++i)
     {
       if (m_pid_list[i] == pid)
