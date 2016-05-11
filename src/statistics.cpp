@@ -1,5 +1,8 @@
+//system headers
 #include <iostream>
+#include <stdio.h>
 
+//project headers
 #include "statistics.hpp"
 
 Statistics::Statistics(): m_nr_sync_errors(0),
@@ -11,19 +14,70 @@ Statistics::Statistics(): m_nr_sync_errors(0),
 Statistics::~Statistics()
 {
 }
+string Statistics::getPIDType(int pid)
+{
+  if (pid == 0) return "PAT";
+  else if (pid == 1) return "CAT";
+  else if (pid == 2) return "TSDT";
+  else if (pid == 3) return "IPMP";
+  else if (pid >= 4 && pid <= 15) return "FUT";
+  else if (pid >= 16 && pid <= 31) return "DVB_META";
+  else if (pid >= 32 && pid <= 8186 || pid >= 8188 && pid >= 8190) return "PMT";
+  else if (pid == 8187) return "MGT_META";
+  else if (pid == 8191) return "NULLP";
+}
+void Statistics::sortPIDList()
+{
+  unsigned i,j; 
+  for (i = 0; i < m_pid_list.size(); ++i)
+    {
+      for (j = i; j < m_pid_list.size(); ++j)
+	{
+	  if (m_pid_counters[i] < m_pid_counters[j])
+	    {
+	      int temp_pid = m_pid_list[i];
+	      int temp_pidc = m_pid_counters[i];
+	      m_pid_list[i] = m_pid_list[j];
+	      m_pid_counters[i] = m_pid_counters[j];
+	      m_pid_list[j] = temp_pid;
+	      m_pid_counters[j] = temp_pidc;
+	    }
+	}
+    }
+}
 void Statistics::showStatistics()
 {
-  //print out info
-  cout << "--PID--\t" << "Count(%)\t" << "Scrambled(%)\t" << "Cont.Errors(%)\n";
-  cout << "(m_pid_list.size() = " << m_pid_list.size() << ")\n";
-  for (unsigned i = 0; i < m_pid_list.size(); ++i)
+  //print out all or most common packet ids
+  char opt;
+  printf("Print [a]ll PIDs or [t]op 20 most-common?[a/t]: ");
+  scanf("%c",&opt);
+  cout << "Total number of detected TS packets: " << m_global_TS_packet_counter << endl;
+  cout << "PID\tType\tCount(%)\tScrambled(%)\tCont.Errors(%)\n";
+  switch(opt)
     {
-      cout << "0x" << hex << m_pid_list[i] << "\t" <<
-	dec << m_pid_counters[i] << "(" << (float) 100 * m_pid_counters[i] / m_global_TS_packet_counter << ")\t" <<
-	dec << m_scrambles[i] << "(" << (float) 100 * m_scrambles[i] / m_pid_counters[i] << ")\t" <<
-	endl;
-	
-    }
+    case 'a':
+      for (unsigned i = 0; i < m_pid_list.size(); ++i)
+	{
+	  cout << "0x" << hex << m_pid_list[i] << "\t" <<
+	    getPIDType(m_pid_list[i]) << "\t" <<
+	    dec << m_pid_counters[i] << " (" << (float) 100 * m_pid_counters[i] / m_global_TS_packet_counter << "%)\t" <<
+	    dec << m_scrambles[i] << " (" << (float) 100 * m_scrambles[i] / m_pid_counters[i] << "%)\t" << endl;
+	}
+      break;
+    case 't':
+      sortPIDList();
+      for (unsigned i = 0; i < 20; ++i)
+	{
+	  cout << "0x" << hex << m_pid_list[i] << "\t" <<
+	    getPIDType(m_pid_list[i]) << "\t" <<
+	    dec << m_pid_counters[i] << " (" << (float) 100 * m_pid_counters[i] / m_global_TS_packet_counter << "%)\t" <<
+	    dec << m_scrambles[i] << " (" << (float) 100 * m_scrambles[i] / m_pid_counters[i] << "%)\t" << endl;
+	}  
+      break;
+    default:
+      cout << "Bad option. Returning...\n";
+      return;
+    }    	
 }
 void Statistics::setGlobalByteNumber(int nr)
 {
@@ -31,12 +85,10 @@ void Statistics::setGlobalByteNumber(int nr)
 }
 bool Statistics::isPIDregistered(int pid)
 {
-  cout << "list size is : " << m_pid_list.size() << "\n";
   for (unsigned i = 0; i < m_pid_list.size(); ++i)
     {
       if (m_pid_list[i] == pid)
 	{
-	  cout << "Pid " << pid << " is registered!";
 	  return true;
 	}
     }
@@ -44,7 +96,7 @@ bool Statistics::isPIDregistered(int pid)
 }
 void Statistics::registerNewPID(int pid)
 {
-  cout << "Registering new pid: " << pid << endl;
+  //cout << "Registering new pid: " << pid << endl;
   m_pid_list.push_back(pid);
   m_pid_counters.push_back(0);
   m_scrambles.push_back(0);
@@ -55,7 +107,7 @@ int Statistics::getPIDindex(int pid)
     {
       if (m_pid_list[i] == pid)
 	{
-	  cout << "Returning index: " << i << endl;
+	  //cout << "Returning index: " << i << endl;
 	  return i;
 	}
     }
@@ -64,17 +116,17 @@ int Statistics::getPIDindex(int pid)
 void Statistics::addUpScrambleCount(int pid)
 {
   ++m_scrambles[getPIDindex(pid)];
-  cout << "Scramble count: " << m_scrambles[getPIDindex(pid)] << endl;
+  //cout << "Scramble count: " << m_scrambles[getPIDindex(pid)] << endl;
 }
 void Statistics::addUpPidCount(int pid)
 {
   ++m_pid_counters[getPIDindex(pid)];
-  cout << "Counter of pid " << pid << ": " << m_pid_counters[getPIDindex(pid)];
+  //cout << "Counter of pid " << pid << ": " << m_pid_counters[getPIDindex(pid)];
 }
 void Statistics::addUpGlobalPacketCounter()
 {
   ++m_global_TS_packet_counter;
-  cout << "Global TS packet count: " << m_global_TS_packet_counter << endl;
+  //cout << "Global TS packet count: " << dec << m_global_TS_packet_counter << endl;
 }
 int Statistics::getGlobalPacketCounter()
 {

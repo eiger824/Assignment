@@ -7,8 +7,8 @@
 #include <bitset>
 #include <vector>
 
+//project headers
 #include "statistics.hpp"
-#include "types.hpp"
 
 using namespace std;
 
@@ -20,8 +20,8 @@ Header fillHeaderValues(vector<int>header_bytes)
   //the whole byte 2 for PID parsing
   unsigned i;
   bitset<13>pid_bitrepr;
-  bitset<2>scrambled;
-  bitset<8>aux_byte(header_bytes[1]);
+  bitset<2>scrambled_bitrepr;
+  bitset<8>aux_byte1(header_bytes[1]);
   bitset<8>aux_byte2(header_bytes[2]);
   bitset<8>aux_byte3(header_bytes[3]);
   for (i = 0; i < BYTE_SIZE; ++i)
@@ -30,19 +30,25 @@ Header fillHeaderValues(vector<int>header_bytes)
     }
   for (i = BYTE_SIZE; i < 13; ++i)
     {
-      pid_bitrepr[i] = aux_byte[i - BYTE_SIZE];
+      pid_bitrepr[i] = aux_byte1[i - BYTE_SIZE];
     }
   //Now translate pid bitset to ulong
   TS_Header.PID = pid_bitrepr.to_ulong();
+  //cout << "Parsed PID: 0x" << hex << TS_Header.PID << endl;
   //Next, remanining byte
-  scrambled[0] = aux_byte3[BYTE_SIZE - 2];
-  scrambled[1] = aux_byte3[BYTE_SIZE - 1];
+  scrambled_bitrepr[0] = aux_byte3[BYTE_SIZE - 2];
+  scrambled_bitrepr[1] = aux_byte3[BYTE_SIZE - 1];
   //Now translate scrambled to dec
-  if (scrambled.to_ulong() == 0)
-    TS_Header.scrambled = false;
+  if (scrambled_bitrepr.to_ulong() == 0)
+    {
+      TS_Header.scrambled = false;
+    }
   else
-    TS_Header.scrambled = true;
-  
+    {
+      TS_Header.scrambled = true;
+    }
+  //return assembled struct
+  return TS_Header;  
 }
 
 vector<int> getNextHeaderBytes(FILE *file, int position)
@@ -63,7 +69,7 @@ int main(int argc, char **argv)
 {
   /************Variable definition**************/
   ofstream headers("/home/eiger824/Programming/Assignment/logs/headers.log");
-  ofstream to_file("/home/eiger824/Programming/Assignment/logs/bytes.log");
+  ofstream to_file("/home/eiger824/Programming/Assignment/logs/raw_bytes.log");
   FILE *file = fopen(argv[1],"rb");
   bool firstTime = true;
   vector<int>header;
@@ -81,8 +87,7 @@ int main(int argc, char **argv)
       int len = fseek(file, 0, SEEK_END);
       int length = ftell(file);
       watchdog.setGlobalByteNumber(length);
-      cout << "Initial byte pos: " << pos <<
-	", File length (bytes): " << length << "\n";
+      cout << "File length (bytes): " << length << "\n";
       cout << "Extracting byte stream...\n";
       int c;
       //reset current stream pointer to first position
@@ -108,26 +113,30 @@ int main(int argc, char **argv)
 		  
 		  //Fetch the 4-byte header
 		  if (firstTime)
+		    {
 		      header = getNextHeaderBytes(file,0);
+		    }
 		  else
+		    {
 		      header = getNextHeaderBytes(file,ftell(file)-1);
+		    }
 
 		  firstTime = false;
 		  //process info of the parsed header
 		  //1.)create struct out of parsed header bytes
 		  header_struct = fillHeaderValues(header);
+		  //2.) if parsed pid is not registered, do so and add up its counter
 		  if (!watchdog.isPIDregistered(header_struct.PID))
 		    {
 		      watchdog.registerNewPID(header_struct.PID);  
 		    }
-		  //add up pid count
 		  watchdog.addUpPidCount(header_struct.PID);
-		  //check scramble and store in watchdog
+		  //3.)check scramble and store in watchdog
 		  if (header_struct.scrambled)
 		    {
 		      watchdog.addUpScrambleCount(header_struct.PID);
 		    }
-		    //*******************************
+		    //******************************
 		  for (unsigned i = 0; i < HEADER_BYTES; ++i)
 		    {
 		      bitset<8>bit_rep(header[i]);
