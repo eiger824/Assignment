@@ -1,3 +1,4 @@
+//system headers
 #include <iostream>
 #include <fstream>
 #include <stdio.h>
@@ -8,10 +9,29 @@
 #include <bitset>
 #include <vector>
 
+//project headers
 #include "statistics.hpp"
-#include "types.hpp"
 
 using namespace std;
+
+static const int PACKET_SIZE = 188;
+static const int HEADER_BYTES = 4;
+static const int BYTE_SIZE = 8;
+
+enum TYPE
+  {
+    PSI,
+    PES
+  };
+
+struct Header
+{
+  uint sync_byte;
+  short PID;
+  bool scrambled;
+  TYPE type;
+};
+
 
 Header fillHeaderValues(vector<int>header_bytes)
 {
@@ -63,8 +83,8 @@ vector<int> getNextHeaderBytes(FILE *file, int position)
 int main(int argc, char **argv)
 {
   /************Variable definition**************/
-  ofstream headers("/home/eiger824/Programming/Files/logs/headers.log");
-  ofstream to_file("/home/eiger824/Programming/Files/logs/bytes.log");
+  ofstream headers("/home/eiger824/Programming/Assignment/logs/headers.log");
+  ofstream to_file("/home/eiger824/Programming/Assignment/logs/bytes.log");
   FILE *file = fopen(argv[1],"rb");
   bool firstTime = true;
   vector<int>header;
@@ -73,7 +93,6 @@ int main(int argc, char **argv)
   uint nr_sync_errors;
   TYPE type;
   Header header_struct;
-  Statistics watchdog;
   /*********************************************/
   if (file == NULL) perror ("Error opening file");
   else
@@ -81,7 +100,6 @@ int main(int argc, char **argv)
       int pos = ftell(file);
       int len = fseek(file, 0, SEEK_END);
       int length = ftell(file);
-      watchdog.setGlobalByteNumber(length);
       cout << "\nInitial byte pos: " << pos <<
 	", File length (bytes): " << length << "\n";
       cout << "Extracting byte stream...\n";
@@ -103,8 +121,7 @@ int main(int argc, char **argv)
 	      if (c == 71)
 		{
 		  //packet start with sync byte -> add up packet count
-		  watchdog.addUpGlobalPacketCounter();
-		  to_file << "Header starts\n";
+		  to_file << "Header starts\n--------------------\n";
 		  headers << "Header starts\n--------------------\n";
 		  
 		  //Fetch the 4-byte header
@@ -115,19 +132,7 @@ int main(int argc, char **argv)
 
 		  firstTime = false;
 		  //process info of the parsed header
-		  //1.)create struct out of parsed header bytes
-		  header_struct = fillHeaderValues(header);
-		  if (!watchdog.isPIDregistered(header_struct.PID))
-		    {
-		      watchdog.registerNewPID(header_struct.PID);  
-		    }
-		  //add up pid count
-		  watchdog.addUpPidCount(header_struct.PID);
-		  //check scramble and store in watchdog
-		  if (header_struct.scrambled)
-		    {
-		      watchdog.addUpScrambleCount(header_struct.PID);
-		    }
+	       
 		  //********************************
 		  for (unsigned i = 0; i < HEADER_BYTES; ++i)
 		    {
@@ -141,11 +146,9 @@ int main(int argc, char **argv)
 	      to_file << "0x" << hex << c << "\t" << dec << c  << "\t" << bitrep << endl;
 	    }
 
-	  
 	  to_file.close();
 	  headers.close();
 	}
     }
   cout << "Extracted!!\n";
-  watchdog.showStatistics();
 }
