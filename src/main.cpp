@@ -1,8 +1,7 @@
+//system headers
 #include <iostream>
 #include <fstream>
 #include <stdio.h>
-#include <string>
-#include <cstring>
 #include <iomanip>
 #include <cstdlib>
 #include <bitset>
