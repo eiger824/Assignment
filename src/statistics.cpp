@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <iomanip>
+#include <fstream>
 
 //project headers
 #include "statistics.hpp"
@@ -65,7 +66,7 @@ void Statistics::printSingleLine(int index)
 void Statistics::showStatistics()
 {
   //print out all or most common packet ids
-  char opt;
+  char opt, save;
   printf("Print [a]ll PIDs or [t]op 20 most-common?[a/t]: ");
   scanf("%c",&opt);
   cout << "Total number of detected TS packets: " << m_global_TS_packet_counter << endl;
@@ -89,7 +90,61 @@ void Statistics::showStatistics()
     default:
       cout << "Bad option. Returning...\n";
       return;
-    }    	
+    }
+  
+  printf("Save to file?[y/n]: ");
+  scanf(" %c",&save);
+  switch(save)
+    {
+    case 'y':
+      saveOutputToFile(opt);
+      cout << "File saved to " << stat_path << ".Exiting...\n";
+      break;
+    case 'n':
+      cout << "Exiting...\n";
+      break;
+    default:
+      cout << "Bad option. Returning...\n";
+      break;
+    }
+}
+void Statistics::saveOutputToFile(char opt)
+{
+  std::ofstream output(stat_path);
+  if (output.is_open())
+    {
+      output << "Total number of detected TS packets: " << m_global_TS_packet_counter << endl;
+      output << "Number of encountered sync errors: " << m_sync_errors << endl;
+      output << setw(0) << "PID" << setw(15) << "Type" << setw(20) << "Count(%)" << setw(27) << "Scrambled(%)" << setw(20) << "Cont.Errors(%)\n";
+
+      switch (opt)
+	{
+	case 'a':
+	  for (unsigned index = 0; index < m_pid_list.size(); ++index)
+	    {
+	      output << "0x" << hex << m_pid_list[index] << "\t" <<
+		setw(10) << getPIDType(m_pid_list[index]) << "\t" <<
+		setw(10) << dec << m_pid_counters[index] << " (" << (float) 100 * m_pid_counters[index] / m_global_TS_packet_counter << "%)\t" <<
+		setw(10) << dec << m_scrambles[index] << " (" << (float) 100 * m_scrambles[index] / m_pid_counters[index] << "%)\t" <<
+		setw(10) << m_cont_counters[index] << "(" << (float) 100* m_cont_counters[index] / m_pid_counters[index] << "%)" << endl;
+	    }
+	  break;
+	case 't':
+	  for (unsigned index = 0; index < 20; ++index)
+	    {
+	      output << "0x" << hex << m_pid_list[index] << "\t" <<
+		setw(10) << getPIDType(m_pid_list[index]) << "\t" <<
+		setw(10) << dec << m_pid_counters[index] << " (" << (float) 100 * m_pid_counters[index] / m_global_TS_packet_counter << "%)\t" <<
+		setw(10) << dec << m_scrambles[index] << " (" << (float) 100 * m_scrambles[index] / m_pid_counters[index] << "%)\t" <<
+		setw(10) << m_cont_counters[index] << "(" << (float) 100* m_cont_counters[index] / m_pid_counters[index] << "%)" << endl;
+	    }
+	  break;
+	default:
+	  std::cout << "Unknown option. Returning...\n";
+	  return;
+	}
+      output.close();
+    }
 }
 void Statistics::setGlobalByteNumber(int nr)
 {

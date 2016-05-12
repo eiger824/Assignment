@@ -22,6 +22,7 @@ Header fillHeaderValues(vector<int>header_bytes)
   bitset<13>pid_bitrepr;
   bitset<2>scrambled_bitrepr;
   bitset<4>cont_counter_bitrepr;
+  bitset<1>payload_flag_bitrepr;
   bitset<8>aux_byte1(header_bytes[1]);
   bitset<8>aux_byte2(header_bytes[2]);
   bitset<8>aux_byte3(header_bytes[3]);
@@ -44,7 +45,9 @@ Header fillHeaderValues(vector<int>header_bytes)
     {
       cont_counter_bitrepr[i] = aux_byte3[i];
     }
-  //Now translate scrambled & cont_counter to dec
+  //remaining byte: payload flag
+  payload_flag_bitrepr[0] = aux_byte3[4];
+  //Now translate scrambled & cont_counter & payload flag to dec
   if (scrambled_bitrepr.to_ulong() == 0)
     {
       TS_Header.scrambled = false;
@@ -54,6 +57,7 @@ Header fillHeaderValues(vector<int>header_bytes)
       TS_Header.scrambled = true;
     }
   TS_Header.cont_counter = cont_counter_bitrepr.to_ulong();
+  TS_Header.payload_flag = payload_flag_bitrepr.to_ulong();
   //return assembled struct
   return TS_Header;  
 }
@@ -72,9 +76,10 @@ vector<int> getNextHeaderBytes(FILE *file, int position)
   return values;
 }
 
-bool isContCounterError(int glob_cnt, int parsed_cnt)
+bool isContCounterError(int glob_cnt, int parsed_cnt, unsigned int flag)
 {
-  if (glob_cnt % CONT_COUNTER_MAX != parsed_cnt)
+  if (flag == 1 &&
+      glob_cnt % CONT_COUNTER_MAX != parsed_cnt)
     {
       return true;
     }
@@ -181,7 +186,9 @@ int main(int argc, char **argv)
 		    }
 		  cont_counter = header_struct.cont_counter;
 		  //check if parsed counter is correct
-		  if (isContCounterError(watchdog.getPidCounter(header_struct.PID), cont_counter))
+		  if (isContCounterError(watchdog.getPidCounter(header_struct.PID),
+					 cont_counter,
+					 header_struct.payload_flag))
 		    {
 		      watchdog.addUpContCounterError(header_struct.PID);
 		    }
@@ -194,7 +201,7 @@ int main(int argc, char **argv)
 		  headers << "--------------------\n";
 		  
 		}
-	      //start packet "distance" counter (sync errors)
+	      //increase packet "distance" counter (sync errors)
 	      ++sync_error_counter;
 	      bitset<8>bitrep(c);
 	      to_file << "0x" << hex << c << "\t" << dec << c  << "\t" << bitrep << endl;

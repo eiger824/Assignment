@@ -28,6 +28,7 @@ private:
   int getPIDindex(int pid);
   string getPIDType(int pid);
   void printSingleLine(int index);
+  void saveOutputToFile(char opt);
 private:
   uint m_nr_sync_errors;
   vector<int>m_pid_list;

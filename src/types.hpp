@@ -2,6 +2,7 @@ static const int PACKET_SIZE = 188;
 static const int HEADER_BYTES = 4;
 static const int BYTE_SIZE = 8;
 static const int CONT_COUNTER_MAX = 15;
+static const char* stat_path = "/home/eiger824/Programming/Assignment/logs/statistics.log";
 
 enum TYPE
   {
@@ -26,5 +27,5 @@ struct Header
   short PID; //2-byte = 16bits, only need 13
   bool scrambled;
   uint cont_counter;
-  //TYPE type;
+  unsigned int payload_flag;
 };
