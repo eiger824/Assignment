@@ -84,6 +84,18 @@ bool isContCounterError(int glob_cnt, int parsed_cnt)
     }
 }
 
+bool checkDistance(unsigned int d)
+{
+  if (d != PACKET_SIZE)
+    {
+      return false;
+    }
+  else
+    {
+      return true;
+    }
+}
+
 int main(int argc, char **argv)
 {
   /************Variable definition**************/
@@ -92,24 +104,26 @@ int main(int argc, char **argv)
   FILE *file = fopen(argv[1],"rb");
   bool firstTime = true;
   vector<int>header;
-  short PID; //2-byte = 16bits, only need 13
-  bool scrambled;
-  uint nr_sync_errors;
+  unsigned int nr_sync_errors;
+  unsigned int sync_error_counter;
   uint cont_counter;
-  TYPE type;
+  int c, len, length;
   Header header_struct;
   //object that will perform statistics on our input stream
   Statistics watchdog;
   /*********************************************/
-  if (file == NULL) perror ("Error opening file");
+  if (file == NULL)
+    {
+      perror ("Error opening file");
+    }
   else
     {
-      int len = fseek(file, 0, SEEK_END);
-      int length = ftell(file);
+      len = fseek(file, 0, SEEK_END);
+      length = ftell(file);
       watchdog.setGlobalByteNumber(length);
       cout << "File length (bytes): " << length << "\n";
       cout << "Extracting byte stream...\n";
-      int c;
+      sync_error_counter = 0;
       //reset current stream pointer to first position
       fseek(file, 0, SEEK_SET);
       //check if files are open
@@ -121,11 +135,20 @@ int main(int argc, char **argv)
 	  headers << "-Hex-\t" << "-Binary-\n";
 	  while(!feof(file))
 	    {
+	      //add up sync error counter
+	      //++sync_error_counter;
 	      //read 1 byte from file and store it to c
 	      fread(&c,1,1,file);
 	      //sync byte, we will read just 4-byte headers
 	      if (c == 71)
 		{
+		  //check "distance" between two consecutive sync bytes
+		  if (!firstTime && !checkDistance(sync_error_counter))
+		    {
+		      watchdog.addUpSyncErrorCount();
+		    }
+		  //reset sync error counter
+		  sync_error_counter = 0;
 		  //packet start with sync byte -> add up packet count
 		  watchdog.addUpGlobalPacketCounter();
 		  to_file << "Header starts\n";
@@ -171,6 +194,8 @@ int main(int argc, char **argv)
 		  headers << "--------------------\n";
 		  
 		}
+	      //start packet "distance" counter (sync errors)
+	      ++sync_error_counter;
 	      bitset<8>bitrep(c);
 	      to_file << "0x" << hex << c << "\t" << dec << c  << "\t" << bitrep << endl;
 	    }

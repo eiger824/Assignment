@@ -8,12 +8,17 @@
 
 Statistics::Statistics(): m_nr_sync_errors(0),
 			  m_global_TS_packet_counter(0),
-			  m_nr_bytestream(0)
+			  m_nr_bytestream(0),
+			  m_sync_errors(0)
 		
 {
 }
 Statistics::~Statistics()
 {
+}
+void Statistics::addUpSyncErrorCount()
+{
+  ++m_sync_errors;
 }
 string Statistics::getPIDType(int pid)
 {
@@ -55,7 +60,7 @@ void Statistics::printSingleLine(int index)
     setw(10) << getPIDType(m_pid_list[index]) << "\t" <<
     setw(10) << dec << m_pid_counters[index] << " (" << (float) 100 * m_pid_counters[index] / m_global_TS_packet_counter << "%)\t" <<
     setw(10) << dec << m_scrambles[index] << " (" << (float) 100 * m_scrambles[index] / m_pid_counters[index] << "%)\t" <<
-    setw(10) << m_cont_counters[index] << "(" << (float) 100* m_cont_counters[index] / m_global_TS_packet_counter << "%)" << endl;
+    setw(10) << m_cont_counters[index] << "(" << (float) 100* m_cont_counters[index] / m_pid_counters[index] << "%)" << endl;
 }
 void Statistics::showStatistics()
 {
@@ -64,6 +69,7 @@ void Statistics::showStatistics()
   printf("Print [a]ll PIDs or [t]op 20 most-common?[a/t]: ");
   scanf("%c",&opt);
   cout << "Total number of detected TS packets: " << m_global_TS_packet_counter << endl;
+  cout << "Number of encountered sync errors: " << m_sync_errors << endl;
   cout << setw(0) << "PID" << setw(15) << "Type" << setw(20) << "Count(%)" << setw(27) << "Scrambled(%)" << setw(20) << "Cont.Errors(%)\n";
   switch(opt)
     {

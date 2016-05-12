@@ -19,6 +19,7 @@ public:
   void addUpScrambleCount(int pid);
   void addUpGlobalPacketCounter();
   void addUpContCounterError(int pid);
+  void addUpSyncErrorCount();
   int getGlobalPacketCounter();
   void setGlobalByteNumber(int nr);
   int getPidCounter(int pid);
@@ -35,4 +36,5 @@ private:
   vector<int>m_scrambles;
   int m_nr_bytestream;
   vector<int>m_cont_counters;
+  unsigned int m_sync_errors;
 };

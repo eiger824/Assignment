@@ -23,7 +23,7 @@ enum PID_TYPE
 struct Header
 {
   uint sync_byte;
-  short PID;
+  short PID; //2-byte = 16bits, only need 13
   bool scrambled;
   uint cont_counter;
   //TYPE type;
