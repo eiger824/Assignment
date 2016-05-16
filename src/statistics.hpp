@@ -20,6 +20,8 @@ public:
   void addUpGlobalPacketCounter();
   void addUpContCounterError(int pid);
   void addUpSyncErrorCount();
+  void addUpPayloadedPacketCount(int pid);
+  int getPayloadedPacketCount(int pid);
   int getGlobalPacketCounter();
   void setGlobalByteNumber(int nr);
   int getPidCounter(int pid);
@@ -38,4 +40,5 @@ private:
   int m_nr_bytestream;
   vector<int>m_cont_counters;
   unsigned int m_sync_errors;
+  vector<int>m_payloaded_packets;
 };

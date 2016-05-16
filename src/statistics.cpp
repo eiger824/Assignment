@@ -45,12 +45,17 @@ void Statistics::sortPIDList()
 	      int temp_pid = m_pid_list[i];
 	      int temp_pidc = m_pid_counters[i];
 	      int temp_pidcc = m_cont_counters[i];
+	      int temp_pidpc = m_payloaded_packets[i];
+
 	      m_pid_list[i] = m_pid_list[j];
 	      m_pid_counters[i] = m_pid_counters[j];
 	      m_cont_counters[i] = m_cont_counters[j];
+	      m_payloaded_packets[i] = m_payloaded_packets[j];
+
 	      m_pid_list[j] = temp_pid;
 	      m_pid_counters[j] = temp_pidc;
 	      m_cont_counters[j] = temp_pidcc;
+	      m_payloaded_packets[j] = temp_pidpc;
 	    }
 	}
     }
@@ -59,9 +64,9 @@ void Statistics::printSingleLine(int index)
 {
   cout << "0x" << hex << m_pid_list[index] << "\t" <<
     setw(10) << getPIDType(m_pid_list[index]) << "\t" <<
-    setw(10) << dec << m_pid_counters[index] << " (" << (float) 100 * m_pid_counters[index] / m_global_TS_packet_counter << "%)\t" <<
-    setw(10) << dec << m_scrambles[index] << " (" << (float) 100 * m_scrambles[index] / m_pid_counters[index] << "%)\t" <<
-    setw(10) << m_cont_counters[index] << "(" << (float) 100* m_cont_counters[index] / m_pid_counters[index] << "%)" << endl;
+    setw(10) << dec << m_pid_counters[index] << " (" << setprecision(2) << fixed << (float) 100 * m_pid_counters[index] / m_global_TS_packet_counter << "%)\t" <<
+    setw(10) << dec << m_scrambles[index]  << " (" << setprecision(2) << fixed << (float) 100 * m_scrambles[index] / m_pid_counters[index] << "%)\t" <<
+    setw(10) << m_cont_counters[index] << "(" << setprecision(2) << fixed << setprecision(2) << fixed << (float) 100* m_cont_counters[index] / m_payloaded_packets[index] << "%)" << endl;
 }
 void Statistics::showStatistics()
 {
@@ -71,7 +76,7 @@ void Statistics::showStatistics()
   scanf("%c",&opt);
   cout << "Total number of detected TS packets: " << m_global_TS_packet_counter << endl;
   cout << "Number of encountered sync errors: " << m_sync_errors << endl;
-  cout << setw(0) << "PID" << setw(15) << "Type" << setw(20) << "Count(%)" << setw(27) << "Scrambled(%)" << setw(20) << "Cont.Errors(%)\n";
+  cout << setw(0) << "PID" << setw(15) << "Type" << setw(20) << "Count(%)" << setw(27) << "Scrambled(%)" << setw(25) << "Cont.Errors(%)\n";
   switch(opt)
     {
     case 'a':
@@ -115,7 +120,7 @@ void Statistics::saveOutputToFile(char opt)
     {
       output << "Total number of detected TS packets: " << m_global_TS_packet_counter << endl;
       output << "Number of encountered sync errors: " << m_sync_errors << endl;
-      output << setw(0) << "PID" << setw(15) << "Type" << setw(20) << "Count(%)" << setw(27) << "Scrambled(%)" << setw(20) << "Cont.Errors(%)\n";
+      output << setw(0) << "PID" << setw(15) << "Type" << setw(20) << "Count(%)" << setw(27) << "Scrambled(%)" << setw(25) << "Cont.Errors(%)\n";
 
       switch (opt)
 	{
@@ -124,9 +129,9 @@ void Statistics::saveOutputToFile(char opt)
 	    {
 	      output << "0x" << hex << m_pid_list[index] << "\t" <<
 		setw(10) << getPIDType(m_pid_list[index]) << "\t" <<
-		setw(10) << dec << m_pid_counters[index] << " (" << (float) 100 * m_pid_counters[index] / m_global_TS_packet_counter << "%)\t" <<
-		setw(10) << dec << m_scrambles[index] << " (" << (float) 100 * m_scrambles[index] / m_pid_counters[index] << "%)\t" <<
-		setw(10) << m_cont_counters[index] << "(" << (float) 100* m_cont_counters[index] / m_pid_counters[index] << "%)" << endl;
+		setw(10) << dec << m_pid_counters[index] << " (" << setprecision(2) << fixed << (float) 100 * m_pid_counters[index] / m_global_TS_packet_counter << "%)\t" <<
+		setw(10) << dec << m_scrambles[index] << " (" << setprecision(2) << fixed << (float) 100 * m_scrambles[index] / m_pid_counters[index] << "%)\t" <<
+		setw(10) << m_cont_counters[index] << "(" << setprecision(2) << fixed << (float) 100* m_cont_counters[index] / m_payloaded_packets[index] << "%)" << endl;
 	    }
 	  break;
 	case 't':
@@ -134,9 +139,9 @@ void Statistics::saveOutputToFile(char opt)
 	    {
 	      output << "0x" << hex << m_pid_list[index] << "\t" <<
 		setw(10) << getPIDType(m_pid_list[index]) << "\t" <<
-		setw(10) << dec << m_pid_counters[index] << " (" << (float) 100 * m_pid_counters[index] / m_global_TS_packet_counter << "%)\t" <<
-		setw(10) << dec << m_scrambles[index] << " (" << (float) 100 * m_scrambles[index] / m_pid_counters[index] << "%)\t" <<
-		setw(10) << m_cont_counters[index] << "(" << (float) 100* m_cont_counters[index] / m_pid_counters[index] << "%)" << endl;
+		setw(10) << dec << m_pid_counters[index] << " (" << setprecision(2) << fixed << (float) 100 * m_pid_counters[index] / m_global_TS_packet_counter << "%)\t" <<
+		setw(10) << dec << m_scrambles[index] << " (" << setprecision(2) << fixed << (float) 100 * m_scrambles[index] / m_pid_counters[index] << "%)\t" <<
+		setw(10) << m_cont_counters[index] << "(" << setprecision(2) << fixed << (float) 100* m_cont_counters[index] / m_payloaded_packets[index] << "%)" << endl;
 	    }
 	  break;
 	default:
@@ -161,12 +166,17 @@ bool Statistics::isPIDregistered(int pid)
     }
   return false;
 }
+int Statistics::getPayloadedPacketCount(int pid)
+{
+  return m_payloaded_packets[getPIDindex(pid)];
+}
 void Statistics::registerNewPID(int pid)
 {
   m_pid_list.push_back(pid);
   m_pid_counters.push_back(0);
   m_scrambles.push_back(0);
   m_cont_counters.push_back(0);
+  m_payloaded_packets.push_back(1); //to avoid /0 divisions
 }
 int Statistics::getPIDindex(int pid)
 {
@@ -194,6 +204,10 @@ void Statistics::addUpGlobalPacketCounter()
 int Statistics::getGlobalPacketCounter()
 {
   return m_global_TS_packet_counter;
+}
+void Statistics::addUpPayloadedPacketCount(int pid)
+{
+  ++m_payloaded_packets[getPIDindex(pid)];
 }
 void Statistics::addUpContCounterError(int pid)
 {

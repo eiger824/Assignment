@@ -6,11 +6,138 @@
 #include <cstdlib>
 #include <bitset>
 #include <vector>
+#include <cstdint>
 
 //project headers
 #include "statistics.hpp"
+//#include "types.hpp"
 
 using namespace std;
+
+//Function declaration
+Header fillHeaderValues(vector<int>header_bytes);
+vector<int> getNextHeaderBytes(FILE *file, int position);
+bool isContCounterError(int glob_cnt, int parsed_cnt, unsigned int flag);
+bool checkDistance(unsigned int d);
+
+int main(int argc, char **argv)
+{
+  /************Variable definition**************/
+  ofstream headers("../logs/headers.log");
+  ofstream to_file("../logs/raw_bytes.log");
+  FILE *file;
+  bool firstTime = true;
+  vector<int>header;
+  unsigned int nr_sync_errors;
+  unsigned int sync_error_counter;
+  uint cont_counter;
+  int len, length;
+  Header header_struct;
+  uint8_t c;
+  //object that will perform statistics on our input stream
+  Statistics watchdog;
+  /*********************************************/
+  
+  file = fopen(argv[1],"rb");
+  if (file == NULL)
+    {
+      perror ("Error opening file");
+    }
+  else
+    {
+      len = fseek(file, 0, SEEK_END);
+      length = ftell(file);
+      watchdog.setGlobalByteNumber(length);
+      cout << "File length (bytes): " << length << "\n";
+      cout << "Extracting byte stream...\n";
+      sync_error_counter = 0;
+      //reset current stream pointer to first position
+      fseek(file, 0, SEEK_SET);
+      //check if files are open
+      if(to_file.is_open() &&
+	 headers.is_open())
+	{
+	  cout << "Files open and ready to be overwritten...\n";
+	  to_file << "-Hex-\t" << "-Dec-\t" << "-Binary-" << endl;
+	  headers << "-Hex-\t" << "-Binary-\n";
+	  while(!feof(file))
+	    {
+	      //read 1 byte from file and store it to c
+	      fread(&c,1,1,file);
+	      //sync byte, we will read just 4-byte headers
+	      if (c == 71)
+		{
+		  //check "distance" between two consecutive sync bytes
+		  if (!firstTime && !checkDistance(sync_error_counter))
+		    {
+		      watchdog.addUpSyncErrorCount();
+		    }
+		  //reset sync error counter
+		  sync_error_counter = 0;
+		  //packet start with sync byte -> add up packet count
+		  watchdog.addUpGlobalPacketCounter();
+		  to_file << "Header starts\n";
+		  headers << "Header starts\n--------------------\n";
+		  
+		  //Fetch the 4-byte header
+		  if (firstTime)
+		    {
+		      header = getNextHeaderBytes(file,0);
+		    }
+		  else
+		    {
+		      header = getNextHeaderBytes(file,ftell(file)-1);
+		    }
+
+		  firstTime = false;
+		  //process info of the parsed header
+		  //1.)create struct out of parsed header bytes
+		  header_struct = fillHeaderValues(header);
+		  //2.) if parsed pid is not registered, do so and add up its counter
+		  if (!watchdog.isPIDregistered(header_struct.PID))
+		    {
+		      watchdog.registerNewPID(header_struct.PID);  
+		    }
+		  watchdog.addUpPidCount(header_struct.PID);
+		  //3.)check scramble and store in watchdog
+		  if (header_struct.scrambled)
+		    {
+		      watchdog.addUpScrambleCount(header_struct.PID);
+		    }
+		  cont_counter = header_struct.cont_counter;
+		  //if payload flag is set, add up counter
+		  if (header_struct.payload_flag == 1)
+		    {
+		      watchdog.addUpPayloadedPacketCount(header_struct.PID);
+		    }
+		  //check if parsed counter is correct
+		  if (isContCounterError(watchdog.getPayloadedPacketCount(header_struct.PID),
+					 cont_counter,
+					 header_struct.payload_flag))
+		    {
+		      watchdog.addUpContCounterError(header_struct.PID);
+		    }
+		  //******************************
+		  for (unsigned i = 0; i < HEADER_BYTES; ++i)
+		    {
+		      bitset<8>bit_rep(header[i]);
+		      headers << "0x" << hex << header[i] << "\t" << bit_rep << "\n";
+		    }
+		  headers << "--------------------\n";
+		  
+		}
+	      //increase packet "distance" counter (sync errors)
+	      ++sync_error_counter;
+	      bitset<8>bitrep(c);
+	      to_file << "0x" << hex << (unsigned int)c << "\t" << dec << (unsigned int)c  << "\t" << bitrep << endl;
+	    }
+	  to_file.close();
+	  headers.close();
+	}
+    }
+  cout << "Extracted!!\n";
+  watchdog.showStatistics();
+}
 
 Header fillHeaderValues(vector<int>header_bytes)
 {
@@ -65,7 +192,7 @@ Header fillHeaderValues(vector<int>header_bytes)
 vector<int> getNextHeaderBytes(FILE *file, int position)
 {
   vector<int>values;
-  int nr;
+  uint8_t nr;
   //set the current stream pointer to the specified position
   fseek (file, position, SEEK_SET);
   for (unsigned i = 0; i < HEADER_BYTES; ++i)
@@ -99,117 +226,4 @@ bool checkDistance(unsigned int d)
     {
       return true;
     }
-}
-
-int main(int argc, char **argv)
-{
-  /************Variable definition**************/
-  ofstream headers("/home/eiger824/Programming/Assignment/logs/headers.log");
-  ofstream to_file("/home/eiger824/Programming/Assignment/logs/raw_bytes.log");
-  FILE *file = fopen(argv[1],"rb");
-  bool firstTime = true;
-  vector<int>header;
-  unsigned int nr_sync_errors;
-  unsigned int sync_error_counter;
-  uint cont_counter;
-  int c, len, length;
-  Header header_struct;
-  //object that will perform statistics on our input stream
-  Statistics watchdog;
-  /*********************************************/
-  if (file == NULL)
-    {
-      perror ("Error opening file");
-    }
-  else
-    {
-      len = fseek(file, 0, SEEK_END);
-      length = ftell(file);
-      watchdog.setGlobalByteNumber(length);
-      cout << "File length (bytes): " << length << "\n";
-      cout << "Extracting byte stream...\n";
-      sync_error_counter = 0;
-      //reset current stream pointer to first position
-      fseek(file, 0, SEEK_SET);
-      //check if files are open
-      if(to_file.is_open() &&
-	 headers.is_open())
-	{
-	  cout << "Files open and ready to be overwritten...\n";
-	  to_file << "-Hex-\t" << "-Dec-\t" << "-Binary-" << endl;
-	  headers << "-Hex-\t" << "-Binary-\n";
-	  while(!feof(file))
-	    {
-	      //add up sync error counter
-	      //++sync_error_counter;
-	      //read 1 byte from file and store it to c
-	      fread(&c,1,1,file);
-	      //sync byte, we will read just 4-byte headers
-	      if (c == 71)
-		{
-		  //check "distance" between two consecutive sync bytes
-		  if (!firstTime && !checkDistance(sync_error_counter))
-		    {
-		      watchdog.addUpSyncErrorCount();
-		    }
-		  //reset sync error counter
-		  sync_error_counter = 0;
-		  //packet start with sync byte -> add up packet count
-		  watchdog.addUpGlobalPacketCounter();
-		  to_file << "Header starts\n";
-		  headers << "Header starts\n--------------------\n";
-		  
-		  //Fetch the 4-byte header
-		  if (firstTime)
-		    {
-		      header = getNextHeaderBytes(file,0);
-		    }
-		  else
-		    {
-		      header = getNextHeaderBytes(file,ftell(file)-1);
-		    }
-
-		  firstTime = false;
-		  //process info of the parsed header
-		  //1.)create struct out of parsed header bytes
-		  header_struct = fillHeaderValues(header);
-		  //2.) if parsed pid is not registered, do so and add up its counter
-		  if (!watchdog.isPIDregistered(header_struct.PID))
-		    {
-		      watchdog.registerNewPID(header_struct.PID);  
-		    }
-		  watchdog.addUpPidCount(header_struct.PID);
-		  //3.)check scramble and store in watchdog
-		  if (header_struct.scrambled)
-		    {
-		      watchdog.addUpScrambleCount(header_struct.PID);
-		    }
-		  cont_counter = header_struct.cont_counter;
-		  //check if parsed counter is correct
-		  if (isContCounterError(watchdog.getPidCounter(header_struct.PID),
-					 cont_counter,
-					 header_struct.payload_flag))
-		    {
-		      watchdog.addUpContCounterError(header_struct.PID);
-		    }
-		    //******************************
-		  for (unsigned i = 0; i < HEADER_BYTES; ++i)
-		    {
-		      bitset<8>bit_rep(header[i]);
-		      headers << "0x" << hex << header[i] << "\t" << bit_rep << "\n";
-		    }
-		  headers << "--------------------\n";
-		  
-		}
-	      //increase packet "distance" counter (sync errors)
-	      ++sync_error_counter;
-	      bitset<8>bitrep(c);
-	      to_file << "0x" << hex << c << "\t" << dec << c  << "\t" << bitrep << endl;
-	    }
-	  to_file.close();
-	  headers.close();
-	}
-    }
-  cout << "Extracted!!\n";
-  watchdog.showStatistics();
 }
