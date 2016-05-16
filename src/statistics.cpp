@@ -97,7 +97,6 @@ void Statistics::showStatistics()
 	  cout << setw(0) << "PID" << setw(15) << "Type" << setw(20) << "Count(%)" << setw(27) << "Scrambled(%)" << setw(25) << "Cont.Errors(%)\n";
 	  for (unsigned i = 0; i < m_pid_list.size(); ++i)
 	    {
-	      cout << i << ") ";
 	      printSingleLine(i);
 	    }
 	  correct = false;
