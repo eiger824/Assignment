@@ -31,7 +31,7 @@ string Statistics::getPIDType(int pid)
   else if (pid == 3) return "IPMP";
   else if (pid >= 4 && pid <= 15) return "FUT";
   else if (pid >= 16 && pid <= 31) return "DVB_META";
-  else if (pid >= 32 && pid <= 8186 || pid >= 8188 && pid >= 8190) return "PMT";
+  else if (pid >= 32 && pid <= 8186 || pid >= 8188 && pid <= 8190) return "PMT";
   else if (pid == 8187) return "MGT_META";
   else if (pid == 8191) return "NULLP";
 }
@@ -97,6 +97,7 @@ void Statistics::showStatistics()
 	  cout << setw(0) << "PID" << setw(15) << "Type" << setw(20) << "Count(%)" << setw(27) << "Scrambled(%)" << setw(25) << "Cont.Errors(%)\n";
 	  for (unsigned i = 0; i < m_pid_list.size(); ++i)
 	    {
+	      cout << i << ") ";
 	      printSingleLine(i);
 	    }
 	  correct = false;
