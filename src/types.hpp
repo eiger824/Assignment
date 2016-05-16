@@ -1,7 +1,9 @@
+namespace assignment {
+
 static const int PACKET_SIZE = 188;
 static const int HEADER_BYTES = 4;
 static const int BYTE_SIZE = 8;
-static const int CONT_COUNTER_MAX = 15;
+static const int CONT_COUNTER_MAX = 16;
 static const char* stat_path = "../logs/statistics.log";
 
 enum TYPE
@@ -29,3 +31,4 @@ struct Header
   uint cont_counter;
   unsigned int payload_flag;
 };
+}

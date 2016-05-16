@@ -7,6 +7,7 @@
 #include "types.hpp"
 
 using namespace std;
+namespace assignment {
 class Statistics
 {
 public:
@@ -42,3 +43,4 @@ private:
   unsigned int m_sync_errors;
   vector<int>m_payloaded_packets;
 };
+}

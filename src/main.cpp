@@ -13,10 +13,11 @@
 #include "statistics.hpp"
 
 using namespace std;
+using namespace assignment;
 
-//Function declaration
-Header fillHeaderValues(vector<int>header_bytes);
-vector<int> getNextHeaderBytes(FILE *file, int position);
+//Function declarations
+Header fillHeaderValues(vector<uint8_t>header_bytes);
+vector<uint8_t> getNextHeaderBytes(FILE *file, int position);
 bool isContCounterError(int glob_cnt, int parsed_cnt, unsigned int flag);
 bool checkDistance(unsigned int d);
 void displayHelp();
@@ -28,7 +29,7 @@ int main(int argc, char **argv)
   ofstream to_file("../logs/raw_bytes.log");
   FILE *file;
   bool firstTime = true;
-  vector<int>header;
+  vector<uint8_t>header;
   unsigned int nr_sync_errors;
   unsigned int sync_error_counter;
   int len, length;
@@ -113,7 +114,6 @@ int main(int argc, char **argv)
 		    {
 		      header = getNextHeaderBytes(file,ftell(file)-1);
 		    }
-
 		  firstTime = false;
 		  //process info of the parsed header
 		  //1.)create struct out of parsed header bytes
@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 		    {
 		      watchdog.addUpScrambleCount(header_struct.PID);
 		    }
-		  //if payload flag is set, add up counter
+		  //if payload flag is set, add up payloaded packet counter
 		  if (header_struct.payload_flag == 1)
 		    {
 		      watchdog.addUpPayloadedPacketCount(header_struct.PID);
@@ -142,8 +142,11 @@ int main(int argc, char **argv)
 		      watchdog.addUpContCounterError(header_struct.PID);
 		    }		  
 		}
-	      //increase packet "distance" counter (sync errors)
-	      ++sync_error_counter;
+	      else
+		{
+		  //increase packet "distance" counter (sync errors)
+		  ++sync_error_counter;
+		}
 	      bitset<8>bitrep(c);
 	      to_file << "0x" << hex << (unsigned int)c << "\t" << dec << (unsigned int)c  << "\t" << bitrep << endl;
 	    }
@@ -154,7 +157,7 @@ int main(int argc, char **argv)
   watchdog.showStatistics();
 }
 
-Header fillHeaderValues(vector<int>header_bytes)
+Header fillHeaderValues(vector<uint8_t>header_bytes)
 {
   Header TS_Header;
   TS_Header.sync_byte = header_bytes[0];
@@ -204,9 +207,9 @@ Header fillHeaderValues(vector<int>header_bytes)
   return TS_Header;  
 }
 
-vector<int> getNextHeaderBytes(FILE *file, int position)
+vector<uint8_t> getNextHeaderBytes(FILE *file, int position)
 {
-  vector<int>values;
+  vector<uint8_t>values;
   uint8_t nr;
   //set the current stream pointer to the specified position
   fseek (file, position, SEEK_SET);
@@ -221,7 +224,7 @@ vector<int> getNextHeaderBytes(FILE *file, int position)
 bool isContCounterError(int glob_cnt, int parsed_cnt, unsigned int flag)
 {
   if (flag == 1 &&
-      glob_cnt % CONT_COUNTER_MAX != parsed_cnt)
+      ((glob_cnt % CONT_COUNTER_MAX) != parsed_cnt))
     {
       return true;
     }
@@ -233,7 +236,7 @@ bool isContCounterError(int glob_cnt, int parsed_cnt, unsigned int flag)
 
 bool checkDistance(unsigned int d)
 {
-  if (d != PACKET_SIZE)
+  if (d != PACKET_SIZE - 1)
     {
       return false;
     }
