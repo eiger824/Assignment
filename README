@@ -1,0 +1,14 @@
+1.) Create following subdirectories:
+mkdir build
+mkdir logs
+mkdir streams [OPTIONAL]
+
+2.)copy desired streams to the created streams/ folder [OPTIONAL]
+
+3.)cd build
+
+4.)To configure the project, simply type
+      cmake ..
+
+5.)To build the project, proceed with
+      make
