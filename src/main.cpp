@@ -135,6 +135,7 @@ int main(int argc, char **argv)
 		    }
 		  watchdog.notify("Fetching 4-byte header...[OK]");
 		  firstTime = false;
+		  watchdog.notify("Parsed PID (decimal): " + to_string(header_struct.PID));
 		  watchdog.notify("Processing parsed header...");
 		  //process info of the parsed header
 		  //1.)create struct out of parsed header bytes
@@ -204,7 +205,6 @@ Header fillHeaderValues(vector<uint8_t>header_bytes)
     }
   //Now translate pid bitset to ulong
   TS_Header.PID = pid_bitrepr.to_ulong();
-  //cout << "Parsed PID: 0x" << hex << TS_Header.PID << endl;
   //remanining byte: scrambling
   scrambled_bitrepr[0] = aux_byte3[BYTE_SIZE - 2];
   scrambled_bitrepr[1] = aux_byte3[BYTE_SIZE - 1];
