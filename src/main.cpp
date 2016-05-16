@@ -1,7 +1,7 @@
 /*
-MPEG-2 Transport Stream Analyzer
-Author: Santiago Pagola
-Date: May 16th 2016
+  MPEG-2 Transport Stream Analyzer
+  Author: Santiago Pagola
+  Date: May 16th 2016
 */
 
 //system headers
