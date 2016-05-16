@@ -128,7 +128,7 @@ namespace assignment {
 	  {
 	  case 'y':
 	    saveOutputToFile(opt);
-	    cout << "File saved to " << stat_path << ".Exiting...\n";
+	    cout << "File saved to " << stat_path << ". Exiting...\n";
 	    correct = false;
 	    break;
 	  case 'n':
