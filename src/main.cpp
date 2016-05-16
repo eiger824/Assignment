@@ -46,6 +46,7 @@ int main(int argc, char **argv)
   /*********************************************/
   if (argc == 1)
     {
+      cout << "Error: Not enough input arguments.\n";
       displayHelp();
       return -1;
     }
@@ -87,7 +88,6 @@ int main(int argc, char **argv)
       len = fseek(file, 0, SEEK_END);
       length = ftell(file);
       watchdog.setGlobalByteNumber(length);
-      cout << "about to print..\n";
       watchdog.notify("File length (bytes): " + to_string(length) + ')');
       sync_error_counter = 0;
       //reset current stream pointer to first position
