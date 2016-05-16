@@ -1,3 +1,9 @@
+/*
+MPEG-2 Transport Stream Analyzer
+Author: Santiago Pagola
+Date: May 16th 2016
+*/
+
 //system headers
 #include <iostream>
 #include <fstream>
@@ -50,7 +56,6 @@ int main(int argc, char **argv)
 	{
 	  if (!strcmp(argv[i],"-h") || !strcmp(argv[i], "--help"))
 	    {
-	      cout << argv[i] << endl;
 	      displayHelp();
 	      return -1;
 	    }
@@ -62,6 +67,7 @@ int main(int argc, char **argv)
 	  else
 	    {
 	      perror ("Error: Invalid option.");
+	      displayHelp();
 	      return -1;
 	    }
 	  ++i;
@@ -79,16 +85,16 @@ int main(int argc, char **argv)
       length = ftell(file);
       watchdog.setGlobalByteNumber(length);
       cout << "File length (bytes): " << length << "\n";
-      cout << "Extracting byte stream...\n";
       sync_error_counter = 0;
       //reset current stream pointer to first position
       fseek(file, 0, SEEK_SET);
       //check if files are open
-      if(to_file.is_open())
+      if (to_file.is_open())
 	{
-	  cout << "Files open and ready to be (over)written...\n";
+	  cout << "File open and ready to be (over)written...\n";
+	  cout << "Extracting byte stream...\n";
 	  to_file << "-Hex-\t" << "-Dec-\t" << "-Binary-" << endl;
-	  while(!feof(file))
+	  while (!feof(file))
 	    {
 	      //read 1 byte from file and store it to c
 	      fread(&c,1,1,file);
@@ -135,7 +141,7 @@ int main(int argc, char **argv)
 		      watchdog.addUpPayloadedPacketCount(header_struct.PID);
 		    }
 		  //check if parsed counter is correct
-		  if (isContCounterError(watchdog.getPayloadedPacketCount(header_struct.PID),
+		  if (isContCounterError(watchdog.getPayloadedPacketCount(header_struct.PID) - 1,
 					 header_struct.cont_counter,
 					 header_struct.payload_flag))
 		    {
@@ -236,7 +242,8 @@ bool isContCounterError(int glob_cnt, int parsed_cnt, unsigned int flag)
 
 bool checkDistance(unsigned int d)
 {
-  if (d != PACKET_SIZE - 1)
+  //Assuming a constant & fixed TS packet size of 188 bytes
+  if (d != PACKET_SIZE)
     {
       return false;
     }
