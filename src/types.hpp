@@ -26,10 +26,16 @@ namespace assignment {
     };
   struct Header
   {
-    uint sync_byte;
+    unsigned int sync_byte;
     short PID; //2-byte = 16bits, only need 13
     bool scrambled;
     uint cont_counter;
-    unsigned int payload_flag;
+    unsigned short payload_flag;
+    unsigned short adaptation_field_flag;
+  };
+  struct AdaptationFieldWrapper
+  {
+    unsigned short PCR_flag;
+    unsigned long long PCR;
   };
 }
