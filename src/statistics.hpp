@@ -8,6 +8,7 @@
 
 using namespace std;
 namespace assignment {
+
   class Statistics
   {
   public:
@@ -26,6 +27,8 @@ namespace assignment {
     int getGlobalPacketCounter();
     void setGlobalByteNumber(int nr);
     int getPidCounter(int pid);
+    void setDebugMode(bool mode);
+    void notify(string message);
   private:
     void sortPIDList();
     int getPIDindex(int pid);
@@ -42,5 +45,6 @@ namespace assignment {
     vector<int>m_cont_counters;
     unsigned int m_sync_errors;
     vector<int>m_payloaded_packets;
+    bool m_debug_mode;
   };
 }

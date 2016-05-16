@@ -62,7 +62,12 @@ int main(int argc, char **argv)
 	  else if (!strcmp(argv[i],"-f") || !strcmp(argv[i], "--file"))
 	    {
 	      file = fopen(argv[i+1],"rb");
-	      break;
+	      i+=2;
+	    }
+	  else if (!strcmp(argv[i],"-d") || !strcmp(argv[i], "--debug"))
+	    {
+	      watchdog.setDebugMode(true);
+	      ++i;
 	    }
 	  else
 	    {
@@ -70,10 +75,8 @@ int main(int argc, char **argv)
 	      displayHelp();
 	      return -1;
 	    }
-	  ++i;
 	}
-    }
-  
+    }  
   if (file == NULL)
     {
       perror ("Error opening file");
@@ -84,7 +87,8 @@ int main(int argc, char **argv)
       len = fseek(file, 0, SEEK_END);
       length = ftell(file);
       watchdog.setGlobalByteNumber(length);
-      cout << "File length (bytes): " << length << "\n";
+      cout << "about to print..\n";
+      watchdog.notify("File length (bytes): " + to_string(length) + ')');
       sync_error_counter = 0;
       //reset current stream pointer to first position
       fseek(file, 0, SEEK_SET);
@@ -101,17 +105,26 @@ int main(int argc, char **argv)
 	      //sync byte, we will read just 4-byte headers
 	      if (c == 71)
 		{
+		  watchdog.notify("New sync byte detected.");
+		  watchdog.notify("Checking sync error...)");
 		  //check "distance" between two consecutive sync bytes
 		  if (!firstTime && !checkDistance(sync_error_counter))
 		    {
 		      watchdog.addUpSyncErrorCount();
+		      watchdog.notify("Checking sync error...[FAIL]");
 		    }
+		  
+		  watchdog.notify("Checking sync error...[OK]");
 		  //reset sync error counter
 		  sync_error_counter = 0;
+		  
+		  watchdog.notify("Adding up global packet counter...");
 		  //packet start with sync byte -> add up packet count
 		  watchdog.addUpGlobalPacketCounter();
+		  watchdog.notify("Adding up global packet counter...[OK]");
 		  to_file << "Header starts\n";
 		  //Fetch the 4-byte header
+		  watchdog.notify("Fetching 4-byte header...");
 		  if (firstTime)
 		    {
 		      header = getNextHeaderBytes(file,0);
@@ -120,7 +133,9 @@ int main(int argc, char **argv)
 		    {
 		      header = getNextHeaderBytes(file,ftell(file)-1);
 		    }
+		  watchdog.notify("Fetching 4-byte header...[OK]");
 		  firstTime = false;
+		  watchdog.notify("Processing parsed header...");
 		  //process info of the parsed header
 		  //1.)create struct out of parsed header bytes
 		  header_struct = fillHeaderValues(header);
@@ -146,12 +161,14 @@ int main(int argc, char **argv)
 					 header_struct.payload_flag))
 		    {
 		      watchdog.addUpContCounterError(header_struct.PID);
-		    }		  
+		    }
+		  watchdog.notify("Processing parsed header...[OK]");
 		}
 	      else
 		{
 		  //increase packet "distance" counter (sync errors)
 		  ++sync_error_counter;
+		  watchdog.notify("Increased sync error count: " + to_string(sync_error_counter));
 		}
 	      bitset<8>bitrep(c);
 	      to_file << "0x" << hex << (unsigned int)c << "\t" << dec << (unsigned int)c  << "\t" << bitrep << endl;
@@ -257,6 +274,8 @@ void displayHelp()
 {
   cout << "USAGE:\n";
   cout << "./TS_Analyzer -f <filename>\n";
+  cout << "(**HINT: if debug flat is set, consider pipe-ing the output (>) to a file)\n";
+  cout << "-d, --debug Print exhaustive information\n";
   cout << "-f, --file <filename> Input file to parse\n";
   cout << "-h, --help Print this help\n";
 }

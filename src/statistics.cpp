@@ -12,7 +12,8 @@ namespace assignment {
   Statistics::Statistics(): m_nr_sync_errors(0),
 			    m_global_TS_packet_counter(0),
 			    m_nr_bytestream(0),
-			    m_sync_errors(0)
+			    m_sync_errors(0),
+			    m_debug_mode(false)
 		
   {
   }
@@ -260,6 +261,18 @@ namespace assignment {
   int Statistics::getPidCounter(int pid)
   {
     return m_pid_counters[getPIDindex(pid)];
+  }
+  void Statistics::setDebugMode(bool mode)
+  {
+    m_debug_mode = mode;
+  }
+  void Statistics::notify(string message)
+  {
+    //just print info when debug mode has been enabled
+    if (m_debug_mode)
+      {
+	cout << message << endl;
+      }
   }
 
 }
