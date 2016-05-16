@@ -7,10 +7,10 @@
 #include <bitset>
 #include <vector>
 #include <cstdint>
+#include <cstring>
 
 //project headers
 #include "statistics.hpp"
-//#include "types.hpp"
 
 using namespace std;
 
@@ -19,29 +19,58 @@ Header fillHeaderValues(vector<int>header_bytes);
 vector<int> getNextHeaderBytes(FILE *file, int position);
 bool isContCounterError(int glob_cnt, int parsed_cnt, unsigned int flag);
 bool checkDistance(unsigned int d);
+void displayHelp();
 
+//main
 int main(int argc, char **argv)
 {
   /************Variable definition**************/
-  ofstream headers("../logs/headers.log");
   ofstream to_file("../logs/raw_bytes.log");
   FILE *file;
   bool firstTime = true;
   vector<int>header;
   unsigned int nr_sync_errors;
   unsigned int sync_error_counter;
-  uint cont_counter;
   int len, length;
   Header header_struct;
   uint8_t c;
   //object that will perform statistics on our input stream
   Statistics watchdog;
   /*********************************************/
+  if (argc == 1)
+    {
+      displayHelp();
+      return -1;
+    }
+  else
+    {
+      unsigned i = 1;
+      while (i < argc)
+	{
+	  if (!strcmp(argv[i],"-h") || !strcmp(argv[i], "--help"))
+	    {
+	      cout << argv[i] << endl;
+	      displayHelp();
+	      return -1;
+	    }
+	  else if (!strcmp(argv[i],"-f") || !strcmp(argv[i], "--file"))
+	    {
+	      file = fopen(argv[i+1],"rb");
+	      break;
+	    }
+	  else
+	    {
+	      perror ("Error: Invalid option.");
+	      return -1;
+	    }
+	  ++i;
+	}
+    }
   
-  file = fopen(argv[1],"rb");
   if (file == NULL)
     {
       perror ("Error opening file");
+      return -1;
     }
   else
     {
@@ -54,12 +83,10 @@ int main(int argc, char **argv)
       //reset current stream pointer to first position
       fseek(file, 0, SEEK_SET);
       //check if files are open
-      if(to_file.is_open() &&
-	 headers.is_open())
+      if(to_file.is_open())
 	{
-	  cout << "Files open and ready to be overwritten...\n";
+	  cout << "Files open and ready to be (over)written...\n";
 	  to_file << "-Hex-\t" << "-Dec-\t" << "-Binary-" << endl;
-	  headers << "-Hex-\t" << "-Binary-\n";
 	  while(!feof(file))
 	    {
 	      //read 1 byte from file and store it to c
@@ -77,8 +104,6 @@ int main(int argc, char **argv)
 		  //packet start with sync byte -> add up packet count
 		  watchdog.addUpGlobalPacketCounter();
 		  to_file << "Header starts\n";
-		  headers << "Header starts\n--------------------\n";
-		  
 		  //Fetch the 4-byte header
 		  if (firstTime)
 		    {
@@ -104,7 +129,6 @@ int main(int argc, char **argv)
 		    {
 		      watchdog.addUpScrambleCount(header_struct.PID);
 		    }
-		  cont_counter = header_struct.cont_counter;
 		  //if payload flag is set, add up counter
 		  if (header_struct.payload_flag == 1)
 		    {
@@ -112,19 +136,11 @@ int main(int argc, char **argv)
 		    }
 		  //check if parsed counter is correct
 		  if (isContCounterError(watchdog.getPayloadedPacketCount(header_struct.PID),
-					 cont_counter,
+					 header_struct.cont_counter,
 					 header_struct.payload_flag))
 		    {
 		      watchdog.addUpContCounterError(header_struct.PID);
-		    }
-		  //******************************
-		  for (unsigned i = 0; i < HEADER_BYTES; ++i)
-		    {
-		      bitset<8>bit_rep(header[i]);
-		      headers << "0x" << hex << header[i] << "\t" << bit_rep << "\n";
-		    }
-		  headers << "--------------------\n";
-		  
+		    }		  
 		}
 	      //increase packet "distance" counter (sync errors)
 	      ++sync_error_counter;
@@ -132,7 +148,6 @@ int main(int argc, char **argv)
 	      to_file << "0x" << hex << (unsigned int)c << "\t" << dec << (unsigned int)c  << "\t" << bitrep << endl;
 	    }
 	  to_file.close();
-	  headers.close();
 	}
     }
   cout << "Extracted!!\n";
@@ -226,4 +241,12 @@ bool checkDistance(unsigned int d)
     {
       return true;
     }
+}
+
+void displayHelp()
+{
+  cout << "USAGE:\n";
+  cout << "./TS_Analyzer -f <filename>\n";
+  cout << "-f, --file <filename> Input file to parse\n";
+  cout << "-h, --help Print this help\n";
 }
