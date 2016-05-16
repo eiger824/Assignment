@@ -32,7 +32,7 @@ void displayHelp();
 int main(int argc, char **argv)
 {
   /************Variable definition**************/
-  ofstream to_file("../logs/raw_bytes.log");
+  ofstream to_file(raw_path);
   FILE *file;
   bool firstTime = true;
   vector<uint8_t>header;
@@ -181,6 +181,7 @@ int main(int argc, char **argv)
   watchdog.showStatistics();
 }
 
+//function definitions
 Header fillHeaderValues(vector<uint8_t>header_bytes)
 {
   Header TS_Header;
