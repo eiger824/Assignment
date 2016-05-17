@@ -5,6 +5,7 @@ namespace assignment {
   static const int BYTE_SIZE = 8;
   static const int CONT_COUNTER_MAX = 16;
   static const char* stat_path = "../logs/statistics.log";
+  static const char* raw_path = "../logs/raw_bytes.log";
 
   enum TYPE
     {
@@ -25,10 +26,16 @@ namespace assignment {
     };
   struct Header
   {
-    uint sync_byte;
+    unsigned int sync_byte;
     short PID; //2-byte = 16bits, only need 13
     bool scrambled;
     uint cont_counter;
-    unsigned int payload_flag;
+    unsigned short payload_flag;
+    unsigned short adaptation_field_flag;
+  };
+  struct AdaptationFieldWrapper
+  {
+    unsigned short PCR_flag;
+    unsigned long long PCR;
   };
 }

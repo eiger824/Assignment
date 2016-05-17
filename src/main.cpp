@@ -23,7 +23,9 @@ using namespace assignment;
 
 //Function declarations
 Header fillHeaderValues(vector<uint8_t>header_bytes);
+AdaptationFieldWrapper fetchAdaptationData(vector<uint8_t>data);
 vector<uint8_t> getNextHeaderBytes(FILE *file, int position);
+vector<uint8_t> getAdaptationFieldBytes(FILE *file, int position);
 bool isContCounterError(int glob_cnt, int parsed_cnt, unsigned int flag);
 bool checkDistance(unsigned int d);
 void displayHelp();
@@ -32,7 +34,7 @@ void displayHelp();
 int main(int argc, char **argv)
 {
   /************Variable definition**************/
-  ofstream to_file("../logs/raw_bytes.log");
+  ofstream to_file(raw_path);
   FILE *file;
   bool firstTime = true;
   vector<uint8_t>header;
@@ -40,13 +42,14 @@ int main(int argc, char **argv)
   unsigned int sync_error_counter;
   int len, length;
   Header header_struct;
+  AdaptationFieldWrapper adaptation_struct;
   uint8_t c;
   //object that will perform statistics on our input stream
   Statistics watchdog;
   /*********************************************/
   if (argc == 1)
     {
-      cout << "Error: Not enough input arguments.\n";
+      fprintf (stderr, "Error: Not enough input arguments.\n");
       displayHelp();
       return -1;
     }
@@ -72,7 +75,7 @@ int main(int argc, char **argv)
 	    }
 	  else
 	    {
-	      perror ("Error: Invalid option.");
+	      fprintf (stderr, "Error: Invalid option.\n");
 	      displayHelp();
 	      return -1;
 	    }
@@ -80,7 +83,7 @@ int main(int argc, char **argv)
     }  
   if (file == NULL)
     {
-      perror ("Error opening file");
+      fprintf (stderr, "Error: bad address or inexistent file.\n");
       return -1;
     }
   else
@@ -113,7 +116,7 @@ int main(int argc, char **argv)
 		      watchdog.addUpSyncErrorCount();
 		      watchdog.notify("Checking sync error...[FAIL]");
 		    }
-		  
+		  firstTime = false;
 		  watchdog.notify("Checking sync error...[OK]");
 		  //reset sync error counter
 		  sync_error_counter = 0;
@@ -122,21 +125,17 @@ int main(int argc, char **argv)
 		  //packet start with sync byte -> add up packet count
 		  watchdog.addUpGlobalPacketCounter();
 		  watchdog.notify("Adding up global packet counter...[OK]");
+		  
 		  to_file << "Header starts\n";
+		  
 		  //Fetch the 4-byte header
 		  watchdog.notify("Fetching 4-byte header...");
-		  if (firstTime)
-		    {
-		      header = getNextHeaderBytes(file,0);
-		    }
-		  else
-		    {
-		      header = getNextHeaderBytes(file,ftell(file)-1);
-		    }
+		  header = getNextHeaderBytes(file,ftell(file)-1);	  
 		  watchdog.notify("Fetching 4-byte header...[OK]");
-		  firstTime = false;
+		  
 		  watchdog.notify("Parsed PID (decimal): " + to_string(header_struct.PID));
 		  watchdog.notify("Processing parsed header...");
+		  
 		  //process info of the parsed header
 		  //1.)create struct out of parsed header bytes
 		  header_struct = fillHeaderValues(header);
@@ -151,17 +150,23 @@ int main(int argc, char **argv)
 		    {
 		      watchdog.addUpScrambleCount(header_struct.PID);
 		    }
-		  //if payload flag is set, add up payloaded packet counter
+		  //4.)if payload flag is set, add up payloaded packet counter
 		  if (header_struct.payload_flag == 1)
 		    {
 		      watchdog.addUpPayloadedPacketCount(header_struct.PID);
 		    }
-		  //check if parsed counter is correct
+		  //5.)check if parsed counter is correct
 		  if (isContCounterError(watchdog.getPayloadedPacketCount(header_struct.PID) - 1,
 					 header_struct.cont_counter,
 					 header_struct.payload_flag))
 		    {
 		      watchdog.addUpContCounterError(header_struct.PID);
+		    }
+		  //6.)check if adaptation field flag is set
+		  if (header_struct.adaptation_field_flag == 1)
+		    {
+		      //get pcr flag and PCR value
+		      adaptation_struct = fetchAdaptationData(getAdaptationFieldBytes(file,ftell(file) + 1));
 		    }
 		  watchdog.notify("Processing parsed header...[OK]");
 		}
@@ -181,6 +186,7 @@ int main(int argc, char **argv)
   watchdog.showStatistics();
 }
 
+//function definitions
 Header fillHeaderValues(vector<uint8_t>header_bytes)
 {
   Header TS_Header;
@@ -192,6 +198,7 @@ Header fillHeaderValues(vector<uint8_t>header_bytes)
   bitset<2>scrambled_bitrepr;
   bitset<4>cont_counter_bitrepr;
   bitset<1>payload_flag_bitrepr;
+  bitset<1>adaptation_field_flag_bitrepr;
   bitset<8>aux_byte1(header_bytes[1]);
   bitset<8>aux_byte2(header_bytes[2]);
   bitset<8>aux_byte3(header_bytes[3]);
@@ -215,7 +222,9 @@ Header fillHeaderValues(vector<uint8_t>header_bytes)
     }
   //remaining byte: payload flag
   payload_flag_bitrepr[0] = aux_byte3[4];
-  //Now translate scrambled & cont_counter & payload flag to dec
+  //remaining byte: adaptation field flag
+  adaptation_field_flag_bitrepr[0] = aux_byte3[5];
+  //Now translate scrambled & cont_counter & payload & adaptation flag to dec
   if (scrambled_bitrepr.to_ulong() == 0)
     {
       TS_Header.scrambled = false;
@@ -226,8 +235,68 @@ Header fillHeaderValues(vector<uint8_t>header_bytes)
     }
   TS_Header.cont_counter = cont_counter_bitrepr.to_ulong();
   TS_Header.payload_flag = payload_flag_bitrepr.to_ulong();
+  TS_Header.adaptation_field_flag = adaptation_field_flag_bitrepr.to_ulong();
   //return assembled struct
   return TS_Header;  
+}
+
+AdaptationFieldWrapper fetchAdaptationData(vector<uint8_t>data)
+{
+  AdaptationFieldWrapper TS_AdaptationField;
+  unsigned i;
+  bitset<1>PCR_flag_bitrepr;
+  bitset<8>byte0(data[0]);
+
+  bitset<48>PCR_field_bitrepr;
+  bitset<8>byte1(data[1]);
+  bitset<8>byte2(data[2]);
+  bitset<8>byte3(data[3]);
+  bitset<8>byte4(data[4]);
+  bitset<8>byte5(data[5]);
+  bitset<8>byte6(data[6]);
+  
+  for (i = 0; i < 6 * BYTE_SIZE; ++i)
+    {
+      if (i < 8)
+	PCR_field_bitrepr[i] = byte1[i % BYTE_SIZE];
+      else if (8 <= i && 16 > i)
+	PCR_field_bitrepr[i] = byte2[i % BYTE_SIZE];
+      else if (16 <= i && 24 > i)
+	PCR_field_bitrepr[i] = byte3[i % BYTE_SIZE];
+      else if (24 <= i && 32 > i)
+	PCR_field_bitrepr[i] = byte4[i % BYTE_SIZE];
+      else if (32 <= i && 40 > i)
+	PCR_field_bitrepr[i] = byte5[i % BYTE_SIZE];
+      else if (40 <= i && 48 > i)
+	PCR_field_bitrepr[i] = byte6[i % BYTE_SIZE];
+    }
+  bitset<33>PCR_base_repr;
+  bitset<9>PCR_ext_repr;
+  for (i = 6 * BYTE_SIZE - 1; i >= 0; --i)
+    {
+      if (i > 14) //base
+	{
+	 PCR_base_repr[i - 15] = PCR_field_bitrepr[i];
+	}
+      else if (i < 9) //ext
+	{
+	  PCR_ext_repr[i] = PCR_field_bitrepr[i];
+	}
+    }
+  PCR_flag_bitrepr[0] = byte0[4];
+  TS_AdaptationField.PCR_flag = PCR_flag_bitrepr.to_ulong();
+  
+  if (TS_AdaptationField.PCR_flag == 0)
+    {
+      //set the PCR value to 0 if flag was not set
+      TS_AdaptationField.PCR = 0;
+    }
+  else
+    {
+      //according to ISO-13818-1
+      TS_AdaptationField.PCR = PCR_base_repr.to_ulong() * 300 + PCR_ext_repr.to_ulong();
+    }
+  return TS_AdaptationField;
 }
 
 vector<uint8_t> getNextHeaderBytes(FILE *file, int position)
@@ -238,6 +307,21 @@ vector<uint8_t> getNextHeaderBytes(FILE *file, int position)
   fseek (file, position, SEEK_SET);
   for (unsigned i = 0; i < HEADER_BYTES; ++i)
     {   
+      fread(&nr,1,1,file);
+      values.push_back(nr);
+    }
+  return values;
+}
+
+vector<uint8_t> getAdaptationFieldBytes(FILE *file, int position)
+{
+  vector<uint8_t>values;
+  uint8_t nr;
+  //set the current stream pointer to the specified position
+  fseek (file, position, SEEK_SET);
+  //we want to read 8 bytes of the adaptation field
+  for (unsigned i = 0; i < BYTE_SIZE - 1; ++i)
+    {
       fread(&nr,1,1,file);
       values.push_back(nr);
     }
@@ -273,9 +357,9 @@ bool checkDistance(unsigned int d)
 void displayHelp()
 {
   cout << "USAGE:\n";
-  cout << "./TS_Analyzer -f <filename>\n";
+  cout << "./TS_Analyzer -f <path-to-filename>\n";
   cout << "(**HINT: if debug flat is set, consider pipe-ing the output (>) to a file)\n";
   cout << "-d, --debug Print exhaustive information\n";
-  cout << "-f, --file <filename> Input file to parse\n";
+  cout << "-f, --file <path-to-filename> Input file to parse\n";
   cout << "-h, --help Print this help\n";
 }
