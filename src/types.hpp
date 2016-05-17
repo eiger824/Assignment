@@ -4,6 +4,7 @@ namespace assignment {
   static const int HEADER_BYTES = 4;
   static const int BYTE_SIZE = 8;
   static const int CONT_COUNTER_MAX = 16;
+  static const int TS_CLOCK_FREQ = 27000000;
   static const char* stat_path = "../logs/statistics.log";
   static const char* raw_path = "../logs/raw_bytes.log";
 

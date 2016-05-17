@@ -29,6 +29,14 @@ namespace assignment {
     int getPidCounter(int pid);
     void setDebugMode(bool mode);
     void notify(string message);
+    bool areBothRegistered(int pid);
+    bool noneRegistered(int pid);
+    void registerPair(unsigned int index, long PCR, int pid, bool first_time);
+    unsigned long getByteCount();
+    void setGlobalByteCount(unsigned long count);
+    void setBitrate(float br, int pid);
+    vector<unsigned int>getIndexes(int pid);
+    vector<unsigned long>getValues(int pid);
   private:
     void sortPIDList();
     int getPIDindex(int pid);
@@ -46,5 +54,9 @@ namespace assignment {
     unsigned int m_sync_errors;
     vector<int>m_payloaded_packets;
     bool m_debug_mode;
+    vector<unsigned long>m_PCRs;
+    vector<unsigned int>m_indexes;
+    unsigned long m_byte_count;
+    vector<float>m_bitrates;
   };
 }

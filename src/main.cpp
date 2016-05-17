@@ -29,6 +29,7 @@ vector<uint8_t> getAdaptationFieldBytes(FILE *file, int position);
 bool isContCounterError(int glob_cnt, int parsed_cnt, unsigned int flag);
 bool checkDistance(unsigned int d);
 void displayHelp();
+float computeBitrate(long PCR_i_1, unsigned int index_i_1, long PCR_i, unsigned int index_i);
 
 //main
 int main(int argc, char **argv)
@@ -37,7 +38,9 @@ int main(int argc, char **argv)
   ofstream to_file(raw_path);
   FILE *file;
   bool firstTime = true;
+  bool a = true;
   vector<uint8_t>header;
+  vector<uint8_t>adaptation;
   unsigned int nr_sync_errors;
   unsigned int sync_error_counter;
   int len, length;
@@ -166,7 +169,41 @@ int main(int argc, char **argv)
 		  if (header_struct.adaptation_field_flag == 1)
 		    {
 		      //get pcr flag and PCR value
-		      adaptation_struct = fetchAdaptationData(getAdaptationFieldBytes(file,ftell(file) + 1));
+		      adaptation = getAdaptationFieldBytes(file,ftell(file) + 1);
+		      adaptation_struct = fetchAdaptationData(adaptation);
+		      //register last read position (byte count)
+		      watchdog.setGlobalByteCount(ftell(file) - 1);		      
+		      //register values in watchdog
+		      if (watchdog.noneRegistered(header_struct.PID))
+			{
+			  watchdog.registerPair(watchdog.getByteCount(), 
+						adaptation_struct.PCR,
+						header_struct.PID,
+						true);
+			}
+			else
+			  {
+			    if (!watchdog.areBothRegistered(header_struct.PID))
+			      {
+				watchdog.registerPair(watchdog.getByteCount(), 
+						      adaptation_struct.PCR,
+						      header_struct.PID,
+						      false);
+			      }
+			    else
+			      { //both registered, calculate bitrate
+			
+				vector<unsigned int>indexes = watchdog.getIndexes(header_struct.PID);
+				vector<unsigned long>values = watchdog.getValues(header_struct.PID);
+				cout << indexes[0] << "," << indexes[1] << "," << values[0] << "," << values[1] << endl;
+				float bitrate = computeBitrate(values[0],
+							       indexes[0],
+							       values[1],
+							       indexes[1]);
+				/*cout << bitrate << endl;
+				watchdog.setBitrate(bitrate, header_struct.PID);*/
+			      }
+			  }
 		    }
 		  watchdog.notify("Processing parsed header...[OK]");
 		}
@@ -258,34 +295,35 @@ AdaptationFieldWrapper fetchAdaptationData(vector<uint8_t>data)
   for (i = 0; i < 6 * BYTE_SIZE; ++i)
     {
       if (i < 8)
-	PCR_field_bitrepr[i] = byte1[i % BYTE_SIZE];
-      else if (8 <= i && 16 > i)
-	PCR_field_bitrepr[i] = byte2[i % BYTE_SIZE];
-      else if (16 <= i && 24 > i)
-	PCR_field_bitrepr[i] = byte3[i % BYTE_SIZE];
-      else if (24 <= i && 32 > i)
-	PCR_field_bitrepr[i] = byte4[i % BYTE_SIZE];
-      else if (32 <= i && 40 > i)
-	PCR_field_bitrepr[i] = byte5[i % BYTE_SIZE];
-      else if (40 <= i && 48 > i)
 	PCR_field_bitrepr[i] = byte6[i % BYTE_SIZE];
+      else if (8 <= i && 16 > i)
+	PCR_field_bitrepr[i] = byte5[i % BYTE_SIZE];
+      else if (16 <= i && 24 > i)
+	PCR_field_bitrepr[i] = byte4[i % BYTE_SIZE];
+      else if (24 <= i && 32 > i)
+	PCR_field_bitrepr[i] = byte3[i % BYTE_SIZE];
+      else if (32 <= i && 40 > i)
+	PCR_field_bitrepr[i] = byte2[i % BYTE_SIZE];
+      else if (40 <= i && 48 > i)
+	PCR_field_bitrepr[i] = byte1[i % BYTE_SIZE];
     }
   bitset<33>PCR_base_repr;
   bitset<9>PCR_ext_repr;
-  for (i = 6 * BYTE_SIZE - 1; i >= 0; --i)
+  for (int j = 6 * BYTE_SIZE - 1; j >= 0; --j)
     {
-      if (i > 14) //base
+      if (j > 14) //base
 	{
-	 PCR_base_repr[i - 15] = PCR_field_bitrepr[i];
+	 PCR_base_repr[j - 15] = PCR_field_bitrepr[j];
 	}
-      else if (i < 9) //ext
+      else if (j < 9) //ext
 	{
-	  PCR_ext_repr[i] = PCR_field_bitrepr[i];
+	  PCR_ext_repr[j] = PCR_field_bitrepr[j];
 	}
     }
+    
   PCR_flag_bitrepr[0] = byte0[4];
   TS_AdaptationField.PCR_flag = PCR_flag_bitrepr.to_ulong();
-  
+    
   if (TS_AdaptationField.PCR_flag == 0)
     {
       //set the PCR value to 0 if flag was not set
@@ -294,7 +332,7 @@ AdaptationFieldWrapper fetchAdaptationData(vector<uint8_t>data)
   else
     {
       //according to ISO-13818-1
-      TS_AdaptationField.PCR = PCR_base_repr.to_ulong() * 300 + PCR_ext_repr.to_ulong();
+      TS_AdaptationField.PCR = PCR_base_repr.to_ullong() * 300 + PCR_ext_repr.to_ulong();
     }
   return TS_AdaptationField;
 }
@@ -352,6 +390,12 @@ bool checkDistance(unsigned int d)
     {
       return true;
     }
+}
+
+float computeBitrate(long PCR_i_1, unsigned int index_i_1, long PCR_i, unsigned int index_i)
+{
+  //according to ISO-13818-1 (bits / s)
+  return BYTE_SIZE * ((index_i - index_i_1) * TS_CLOCK_FREQ) / (PCR_i - PCR_i_1);
 }
 
 void displayHelp()

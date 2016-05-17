@@ -13,7 +13,8 @@ namespace assignment {
 			    m_global_TS_packet_counter(0),
 			    m_nr_bytestream(0),
 			    m_sync_errors(0),
-			    m_debug_mode(false)
+			    m_debug_mode(false),
+			    m_byte_count(0)
 		
   {
   }
@@ -49,16 +50,25 @@ namespace assignment {
 		int temp_pidc = m_pid_counters[i];
 		int temp_pidcc = m_cont_counters[i];
 		int temp_pidpc = m_payloaded_packets[i];
+		int temp_pidpcrs = m_PCRs[i];
+		int temp_pidpcrindexes = m_indexes[i];
+		int temp_pidbitrate = m_bitrates[i];
 
 		m_pid_list[i] = m_pid_list[j];
 		m_pid_counters[i] = m_pid_counters[j];
 		m_cont_counters[i] = m_cont_counters[j];
 		m_payloaded_packets[i] = m_payloaded_packets[j];
+		m_PCRs[i] = m_PCRs[j];
+		m_indexes[i] = m_indexes[j];
+		m_bitrates[i] = m_bitrates[j];
 
 		m_pid_list[j] = temp_pid;
 		m_pid_counters[j] = temp_pidc;
 		m_cont_counters[j] = temp_pidcc;
 		m_payloaded_packets[j] = temp_pidpc;
+		m_PCRs[j] = temp_pidpcrs;
+		m_indexes[j] = temp_pidpcrindexes;
+		m_bitrates[j] = temp_pidbitrate;
 	      }
 	  }
       }
@@ -222,6 +232,9 @@ namespace assignment {
     m_scrambles.push_back(0);
     m_cont_counters.push_back(0);
     m_payloaded_packets.push_back(0);
+    m_PCRs.push_back(0); m_PCRs.push_back(0);
+    m_indexes.push_back(0); m_indexes.push_back(0);
+    m_bitrates.push_back(0);
   }
   int Statistics::getPIDindex(int pid)
   {
@@ -274,5 +287,71 @@ namespace assignment {
 	cout << message << endl;
       }
   }
-
+  bool Statistics::areBothRegistered(int pid)
+  {
+    if (m_PCRs[2 * getPIDindex(pid)] != 0 &&
+	m_PCRs[2 * getPIDindex(pid) + 1] != 0 &&
+	m_indexes[2 * getPIDindex(pid)] &&
+	m_indexes[2 * getPIDindex(pid) + 1])
+      {
+	return true;
+      }
+    else
+      {
+	return false;
+      }
+  }
+  bool Statistics::noneRegistered(int pid)
+  {
+    if (m_PCRs[2 * getPIDindex(pid)] == 0 &&
+	m_PCRs[2 * getPIDindex(pid) + 1] == 0 &&
+	m_indexes[2 * getPIDindex(pid)] == 0 &&
+	m_indexes[2 * getPIDindex(pid) + 1] == 0)
+      {
+	return true;
+      }
+    else
+      {
+	return false;
+      }
+  }
+  void Statistics::registerPair(unsigned int index, long PCR, int pid, bool first_time)
+  {
+    if (first_time)
+      {
+	m_PCRs[2 * getPIDindex(pid)] = PCR;
+	m_indexes[2 * getPIDindex(pid)] = index;
+      }
+    else
+      {
+	m_PCRs[2 * getPIDindex(pid) + 1] = PCR;
+	m_indexes[2 * getPIDindex(pid) + 1] = index;
+      }
+  }
+  void Statistics::setGlobalByteCount(unsigned long count)
+  {
+    m_byte_count = count;
+  }
+  unsigned long Statistics::getByteCount()
+  {
+    return m_byte_count;
+  }
+  void Statistics::setBitrate(float br, int pid)
+  {
+    m_bitrates[getPIDindex(pid)] = br;
+  }
+  vector<unsigned int> Statistics::getIndexes(int pid)
+  {
+    vector<unsigned int>candidates;
+    candidates.push_back(m_indexes[2 * getPIDindex(pid)]);
+    candidates.push_back(m_indexes[2 * getPIDindex(pid) + 1]);
+    return candidates;
+  }
+  vector<unsigned long> Statistics::getValues(int pid)
+  {
+    vector<unsigned long>candidates;
+    candidates.push_back(m_PCRs[2 * getPIDindex(pid)]);
+    candidates.push_back(m_PCRs[2 * getPIDindex(pid) + 1]);
+    return candidates;
+  }
 }
