@@ -46,7 +46,7 @@ int main(int argc, char **argv)
   /*********************************************/
   if (argc == 1)
     {
-      cout << "Error: Not enough input arguments.\n";
+      fprintf (stderr,"Error: Not enough input arguments.\n");
       displayHelp();
       return -1;
     }
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
 	    }
 	  else
 	    {
-	      perror ("Error: Invalid option.");
+	      fprintf (stderr, "Error: Invalid option.");
 	      displayHelp();
 	      return -1;
 	    }
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     }  
   if (file == NULL)
     {
-      perror ("Error opening file");
+      fprintf (stderr,"Error opening file");
       return -1;
     }
   else
