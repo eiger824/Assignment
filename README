@@ -12,3 +12,6 @@ mkdir streams [OPTIONAL]
 
 5.)To build the project, proceed with
       make
+
+**Further explanation: it has been assumed that the TS packet length is of
+188 bytes, according to ISO-13818-1, for the sync error calculation
