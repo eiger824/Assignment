@@ -273,9 +273,9 @@ bool checkDistance(unsigned int d)
 void displayHelp()
 {
   cout << "USAGE:\n";
-  cout << "./TS_Analyzer -f <filename>\n";
+  cout << "./TS_Analyzer -f <path-to-filename>\n";
   cout << "(**HINT: if debug flat is set, consider pipe-ing the output (>) to a file)\n";
   cout << "-d, --debug Print exhaustive information\n";
-  cout << "-f, --file <filename> Input file to parse\n";
+  cout << "-f, --file <path-to-filename> Input file to parse\n";
   cout << "-h, --help Print this help\n";
 }
